@@ -11,6 +11,8 @@
 
 # ORVEX — architecture rules
 
+- Database migration history is project-local; after remix, start from an empty baseline managed by the migration tool rather than replaying the source project's migrations, so copied schema and seed changes cannot run against the new database.
+
 - Bonding-curve math lives only in `src/lib/curve.ts` (pure) and is executed only inside the `trade`/`createToken` server functions in `src/lib/launchpad.functions.ts`. Trades apply reserves with an optimistic-concurrency update on `tokens_sold` (retry ×3) so parallel buys can't double-spend the curve; the browser only ever shows quotes.
 - Token creation, trade writes, logo uploads and signed logo URLs go through server functions against the service-role client; the database has no public INSERT/UPDATE policies, so curve math can't be faked from the client.
 - Charts are built client-side by aggregating real `token_trades` rows (`buildCandles` in `src/lib/tokens.ts`); the `1m` timeframe is the live feed view.
