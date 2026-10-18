@@ -21,9 +21,14 @@ import { Change } from "@/components/orvex/Change";
 import { PriceChart } from "@/components/orvex/PriceChart";
 import { CurveProgress } from "@/components/orvex/CurveProgress";
 import { useWallet } from "@/components/orvex/wallet";
+import { FavoriteButton } from "@/components/orvex/Watchlist";
+import { MarketError, MarketNotFound } from "@/components/orvex/RouteFeedback";
+import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/token/$symbol")({
+  validateSearch: (s: Record<string, unknown>) => ({ side: s["side"] === "sell" ? "sell" as const : "buy" as const }),
+  errorComponent: MarketError, notFoundComponent: MarketNotFound,
   loader: async ({ context, params }) => {
     const d = await context.queryClient.ensureQueryData(tokenQuery(params.symbol));
     if (!d) throw notFound();
@@ -44,9 +49,9 @@ function TokenPage() {
   const { symbol } = Route.useParams();
   const { data } = useSuspenseQuery(tokenQuery(symbol));
   const qc = useQueryClient();
-  const [fav, setFav] = useState(false);
-  const t = data!.token;
-  const trades = data!.trades;
+  if (!data) throw notFound();
+  const t = data.token;
+  const trades = data.trades;
 
   // Realtime: refresh on every new trade for this token.
   useEffect(() => {
@@ -79,13 +84,13 @@ function TokenPage() {
           </div>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button variant="secondary" size="icon" aria-label="Favorite" onClick={() => { setFav(!fav); toast(fav ? "Removed from watchlist" : "Added to watchlist"); }}><Heart className={cn(fav && "fill-danger text-danger")} /></Button>
+          <FavoriteButton id={t.id} />
           <Button variant="secondary" size="icon" aria-label="Share" onClick={() => { navigator.clipboard.writeText(location.href); toast("Link copied"); }}><Share2 /></Button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        {[["Price", fmtUsd(t.priceUsd)], ["Market cap", fmtUsd(t.marketCapUsd)], ["24h", `${t.change24h.toFixed(2)}%`], ["Vol 24h", fmtUsd(t.volume24hUsd)], ["Raised", `${t.realBase.toFixed(3)} zkLTC`], ["Holders", String(holders.length)], ["Age", fmtAge(t.createdAt)]].map(([k, v]) => (
+        {[["Price", fmtUsd(t.priceUsd)], ["Market cap", fmtUsd(t.marketCapUsd)], ["24h", `${t.change24h.toFixed(2)}%`], ["Vol 24h", fmtUsd(t.volume24hUsd)], ["Raised", `${t.realBase.toFixed(3)} zkLTC`], ["Holders", String(t.holders)], ["Age", fmtAge(t.createdAt)]].map(([k, v]) => (
           <div key={k} className="glass rounded-xl p-3"><div className="text-xs text-muted-foreground">{k}</div><div className="mt-0.5 font-mono font-semibold">{v}</div></div>
         ))}
       </div>
@@ -161,7 +166,8 @@ function SwapPanel({ t }: { t: TokenView }) {
   const { address, open } = useWallet();
   const qc = useQueryClient();
   const doIndex = useServerFn(indexTx);
-  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const { side } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [amt, setAmt] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -216,7 +222,7 @@ function SwapPanel({ t }: { t: TokenView }) {
       <div className="mb-4 flex items-center justify-between"><span className="font-semibold">Trade</span><Change v={t.change24h} /></div>
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-surface p-1">
         {(["buy", "sell"] as const).map((s) => (
-          <button key={s} onClick={() => { setSide(s); setAmt(""); }} className={cn("rounded-lg py-2 text-sm font-semibold capitalize transition", side === s ? (s === "buy" ? "bg-success/20 text-success" : "bg-danger/20 text-danger") : "text-muted-foreground")}>{s}</button>
+          <button key={s} onClick={() => { navigate({ search: { side: s }, replace: true }); setAmt(""); }} className={cn("rounded-lg py-2 text-sm font-semibold capitalize transition", side === s ? (s === "buy" ? "bg-success/20 text-success" : "bg-danger/20 text-danger") : "text-muted-foreground")}>{s}</button>
         ))}
       </div>
       <div className="mt-4 flex justify-between text-xs text-muted-foreground"><span>You pay ({inUnit})</span>{side === "sell" && <span>Balance: {fmtNum(balance)}</span>}</div>
@@ -240,6 +246,7 @@ function SwapPanel({ t }: { t: TokenView }) {
       <Button className="mt-4 h-11 w-full bg-gradient-primary shadow-glow" disabled={t.graduated || busy || (!!address && (!q || !!err))} onClick={() => (address ? setConfirm(true) : open())}>
         {busy ? <Loader2 className="animate-spin" /> : t.graduated ? "Trading moved to DEX" : address ? `${side === "buy" ? "Buy" : "Sell"} ${t.symbol}` : "Connect wallet"}
       </Button>
+      {t.graduated && <Button asChild variant="outline" className="mt-2 w-full"><Link to="/dex">Open DEX</Link></Button>}
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>

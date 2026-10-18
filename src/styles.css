@@ -54,22 +54,22 @@
 }
 
 :root {
-  --radius: 0.875rem;
-  --background: oklch(0.155 0.02 262);
+  --radius: 0.5rem;
+  --background: oklch(0.135 0.003 260);
   --foreground: oklch(0.97 0.005 250);
-  --card: oklch(0.205 0.025 258);
+  --card: oklch(0.18 0.004 260);
   --card-foreground: oklch(0.97 0.005 250);
-  --surface: oklch(0.245 0.03 256);
-  --popover: oklch(0.205 0.025 258);
+  --surface: oklch(0.225 0.005 260);
+  --popover: oklch(0.18 0.004 260);
   --popover-foreground: oklch(0.97 0.005 250);
-  --primary: oklch(0.48 0.11 260);
+  --primary: oklch(0.66 0.17 248);
   --primary-foreground: oklch(0.98 0 0);
   --primary-glow: oklch(0.7 0.12 250);
-  --secondary: oklch(0.26 0.03 256);
+  --secondary: oklch(0.24 0.006 260);
   --secondary-foreground: oklch(0.95 0.005 250);
-  --muted: oklch(0.24 0.025 256);
+  --muted: oklch(0.24 0.006 260);
   --muted-foreground: oklch(0.72 0.01 230);
-  --accent: oklch(0.28 0.04 256);
+  --accent: oklch(0.27 0.007 260);
   --accent-foreground: oklch(0.97 0.005 250);
   --silver: oklch(0.72 0.006 220);
   --success: oklch(0.76 0.14 158);
@@ -83,12 +83,12 @@
   --chart-2: oklch(0.76 0.14 158);
   --chart-3: oklch(0.68 0.17 22);
   --chart-4: oklch(0.72 0.006 220);
-  --chart-5: oklch(0.48 0.11 260);
-  --sidebar: oklch(0.205 0.025 258);
+  --chart-5: oklch(0.66 0.17 248);
+  --sidebar: oklch(0.18 0.004 260);
   --sidebar-foreground: oklch(0.97 0.005 250);
-  --sidebar-primary: oklch(0.48 0.11 260);
+  --sidebar-primary: oklch(0.66 0.17 248);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.28 0.04 256);
+  --sidebar-accent: oklch(0.27 0.007 260);
   --sidebar-accent-foreground: oklch(0.97 0.005 250);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.7 0.12 250);
@@ -124,3 +124,8 @@
   background-clip: text;
   color: transparent;
 }
+
+.token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 12px; }
+.token-art { background: repeating-linear-gradient(0deg, transparent, transparent 23px, var(--border) 24px), repeating-linear-gradient(90deg, transparent, transparent 23px, var(--border) 24px); }
+@media (max-width: 420px) { .token-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }

@@ -11,6 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { WalletProvider } from "@/components/orvex/wallet";
+import { WatchlistProvider } from "@/components/orvex/Watchlist";
 import { Shell } from "@/components/orvex/Shell";
 
 import appCss from "../styles.css?url";
@@ -85,12 +86,12 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <WalletProvider>
+      <WalletProvider><WatchlistProvider>
         <Shell>
           <Outlet />
         </Shell>
         <Toaster theme="dark" position="top-right" />
-      </WalletProvider>
+      </WatchlistProvider></WalletProvider>
     </QueryClientProvider>
   );
 }

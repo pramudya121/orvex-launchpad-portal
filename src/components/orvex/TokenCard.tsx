@@ -1,45 +1,31 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { fmtAge, fmtUsd, short } from "@/lib/tokens";
+import { CURVE } from "@/lib/curve";
 import type { TokenView } from "@/lib/launchpad.functions";
-import { TokenLogo } from "./TokenLogo";
 import { Change } from "./Change";
 import { CurveProgress } from "./CurveProgress";
+import { FavoriteButton } from "./Watchlist";
 
 export function TokenCard({ t }: { t: TokenView }) {
-  return (
-    <Link
-      to="/token/$symbol"
-      params={{ symbol: t.symbol }}
-      className="glass group block rounded-2xl p-5 transition hover:-translate-y-0.5 hover:border-primary-glow/40 hover:shadow-glow focus-visible:outline-2 focus-visible:outline-ring"
-    >
-      <div className="flex items-center gap-3">
-        <TokenLogo symbol={t.symbol} url={t.logoUrl} size={44} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold">{t.name}</div>
-          <div className="text-xs text-muted-foreground">${t.symbol} · {fmtAge(t.createdAt)}</div>
-        </div>
-        <Change v={t.change24h} />
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-        <Stat label="Price" value={fmtUsd(t.priceUsd)} />
-        <Stat label="MCap" value={fmtUsd(t.marketCapUsd)} />
-        <Stat label="Vol 24h" value={fmtUsd(t.volume24hUsd)} />
-      </div>
-      <CurveProgress value={t.progress} graduated={t.graduated} className="mt-4" />
-      <div className="mt-3 text-[11px] text-muted-foreground">by <span className="font-mono">{short(t.creator)}</span></div>
-    </Link>
-  );
-}
-
-export function TokenCardSkeleton() {
-  return <div className="glass h-[214px] animate-pulse rounded-2xl" />;
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-surface/60 px-2.5 py-2">
-      <div className="text-muted-foreground">{label}</div>
-      <div className="mt-0.5 font-mono font-medium">{value}</div>
+  const [failed, setFailed] = useState(false);
+  return <article className="group min-w-0 overflow-hidden rounded-lg border border-border bg-card p-2 transition-colors hover:border-primary/50">
+    <div className="relative aspect-square overflow-hidden rounded-md bg-surface">
+      <Link to="/token/$symbol" params={{ symbol: t.symbol }} aria-label={`Open ${t.name}`} className="grid h-full place-items-center">
+        {t.logoUrl && !failed ? <img src={t.logoUrl} alt={t.name} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none" /> : <div className="token-art grid h-full w-full place-items-center"><span className="font-mono text-4xl font-bold text-primary">{t.symbol.slice(0, 2)}</span></div>}
+      </Link>
+      <span className="absolute left-2 top-2 rounded-sm bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">zkLTC</span>
+      <div className="absolute right-2 top-2"><FavoriteButton id={t.id} /></div>
     </div>
-  );
+    <Link to="/token/$symbol" params={{ symbol: t.symbol }} className="block px-0.5 pb-1 pt-2">
+      <div className="truncate text-xs font-bold">{t.name}</div>
+      <div className="mt-0.5 flex justify-between text-[10px] text-muted-foreground"><span className="truncate">${t.symbol}</span><span className="shrink-0">{fmtAge(t.createdAt)}</span></div>
+      <div className="mt-2 flex items-center justify-between gap-1"><div className="truncate text-sm font-bold">{fmtUsd(t.marketCapUsd)} <span className="text-[9px] font-normal text-muted-foreground">MC</span></div><Change v={t.change24h} /></div>
+      <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">{fmtUsd(t.priceUsd)}</div>
+      <CurveProgress value={t.progress} graduated={t.graduated} className="mt-2" />
+      <div className="mt-2 grid grid-cols-2 divide-x divide-border border-y border-border py-2 text-[9px]"><div><div className="text-muted-foreground">RAISED</div><div className="mt-0.5 font-mono text-[11px] font-semibold">{fmtUsd(t.realBase * CURVE.baseUsd)}</div></div><div className="pl-2"><div className="text-muted-foreground">VOL 24H</div><div className="mt-0.5 font-mono text-[11px] font-semibold">{fmtUsd(t.volume24hUsd)}</div></div></div>
+      <div className="mt-2 flex justify-between gap-1 font-mono text-[9px] text-muted-foreground"><span>{short(t.address)}</span><span className="truncate">by {short(t.creator)}</span></div>
+    </Link>
+  </article>;
 }
+export function TokenCardSkeleton() { return <div className="aspect-[1/1.85] animate-pulse rounded-lg border border-border bg-card" />; }
