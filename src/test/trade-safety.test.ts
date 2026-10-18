@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { assetKey, minimumOutput, transactionAmount, validateSwapPath } from "../lib/web3/trade-safety";
+import {
+  assetKey,
+  minimumOutput,
+  transactionAmount,
+  validateSwapPath,
+} from "../lib/web3/trade-safety";
 
 describe("transaction bounds", () => {
   it("keeps 18-decimal amounts exact", () => {

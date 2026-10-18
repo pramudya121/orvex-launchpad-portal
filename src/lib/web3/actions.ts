@@ -26,9 +26,15 @@ async function curveMinimum(curve: Address, amount: bigint, side: "buy" | "sell"
   const [vToken, vBase, remaining] = reserves;
   const fees = protocol + creator;
   if (fees >= 10_000n) throw new Error("Curve fees are invalid");
-  const net = side === "buy" ? amount - amount * fees / 10_000n : amount;
-  const quoted = await pc.readContract({ address: curve, abi: bondingCurveAbi, functionName: "getAmountOut", args: [net, side === "buy" ? vBase : vToken, side === "buy" ? vToken : vBase] });
-  const output = side === "buy" ? (quoted > remaining ? remaining : quoted) : quoted - quoted * fees / 10_000n;
+  const net = side === "buy" ? amount - (amount * fees) / 10_000n : amount;
+  const quoted = await pc.readContract({
+    address: curve,
+    abi: bondingCurveAbi,
+    functionName: "getAmountOut",
+    args: [net, side === "buy" ? vBase : vToken, side === "buy" ? vToken : vBase],
+  });
+  const output =
+    side === "buy" ? (quoted > remaining ? remaining : quoted) : quoted - (quoted * fees) / 10_000n;
   return minimumOutput(output, Math.round(CURVE.slippage * 10_000));
 }
 
@@ -122,7 +128,11 @@ export async function creationFee() {
 }
 
 /** Launches a token through LaunchpadFactory; returns the tx hash and the new token/curve addresses. */
-export async function createOnchain(account: Address, p: { name: string; symbol: string }, onSubmitted?: (hash: Hash) => void) {
+export async function createOnchain(
+  account: Address,
+  p: { name: string; symbol: string },
+  onSubmitted?: (hash: Hash) => void,
+) {
   const fee = await creationFee();
   const pc = publicClient();
   await pc.simulateContract({
@@ -135,12 +145,12 @@ export async function createOnchain(account: Address, p: { name: string; symbol:
   });
   const w = await walletClient(account);
   const hash = await w.writeContract({
-      address: CONTRACTS.factory,
-      abi: factoryAbi,
-      functionName: "createToken",
-      args: [p.name, p.symbol],
-      value: fee,
-    });
+    address: CONTRACTS.factory,
+    abi: factoryAbi,
+    functionName: "createToken",
+    args: [p.name, p.symbol],
+    value: fee,
+  });
   onSubmitted?.(hash);
   await confirm(hash);
   const receipt = await pc.getTransactionReceipt({ hash });
@@ -197,7 +207,8 @@ export async function swap(
   amountOutMin: bigint,
   path: Address[],
 ) {
-  if (amountIn <= 0n || amountOutMin <= 0n) throw new Error("Amount and minimum output must be positive");
+  if (amountIn <= 0n || amountOutMin <= 0n)
+    throw new Error("Amount and minimum output must be positive");
   const wrapping = (!from && to === CONTRACTS.wzkltc) || (from === CONTRACTS.wzkltc && !to);
   if (!wrapping) validateSwapPath(from, to, CONTRACTS.wzkltc, path);
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);

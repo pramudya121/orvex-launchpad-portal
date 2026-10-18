@@ -153,15 +153,28 @@ function Dex() {
     try {
       const pc = publicClient();
       const [fromDecimals, toDecimals] = await Promise.all([
-        from.address ? pc.readContract({ address: from.address, abi: launchTokenAbi, functionName: "decimals" }) : 18,
-        to.address ? pc.readContract({ address: to.address, abi: launchTokenAbi, functionName: "decimals" }) : 18,
+        from.address
+          ? pc.readContract({
+              address: from.address,
+              abi: launchTokenAbi,
+              functionName: "decimals",
+            })
+          : 18,
+        to.address
+          ? pc.readContract({ address: to.address, abi: launchTokenAbi, functionName: "decimals" })
+          : 18,
       ]);
       if (Number(fromDecimals) !== from.decimals || Number(toDecimals) !== to.decimals)
-        throw new Error("Token precision differs from this listing; swap stopped for your protection");
-      const fresh = isWrap ? { path: [] as Address[], amountOut: amountIn } : await quoteSwap(from.address, to.address, amountIn);
+        throw new Error(
+          "Token precision differs from this listing; swap stopped for your protection",
+        );
+      const fresh = isWrap
+        ? { path: [] as Address[], amountOut: amountIn }
+        : await quoteSwap(from.address, to.address, amountIn);
       if (!fresh) throw new Error("No liquidity for this pair yet");
       const min = minimumOutput(quote.amountOut, Math.round(slippage * 100));
-      if (fresh.amountOut < min) throw new Error("Price moved too much — review the refreshed quote");
+      if (fresh.amountOut < min)
+        throw new Error("Price moved too much — review the refreshed quote");
       const hash = await swap(address, from.address, to.address, amountIn, min, fresh.path);
       toast.success(`Swapped ${amt} ${from.symbol} → ${fmtNum(out, 4)} ${to.symbol}`, {
         action: {

@@ -93,7 +93,9 @@ function Create() {
         setPendingMeta(value.meta);
         setStep(3);
       }
-    } catch { sessionStorage.removeItem("orvex-pending-launch"); }
+    } catch {
+      sessionStorage.removeItem("orvex-pending-launch");
+    }
   }, []);
   const clearPending = () => {
     setPendingHash(null);
@@ -152,11 +154,15 @@ function Create() {
         logo: logoUrl,
       };
       setDeploy({ p: 35, label: "Confirm the launch in your wallet" });
-      const { hash, curve } = await createOnchain(address, { name: f.name.trim(), symbol }, (hash) => {
-        setPendingHash(hash);
-        setPendingMeta(meta);
-        sessionStorage.setItem("orvex-pending-launch", JSON.stringify({ hash, meta }));
-      });
+      const { hash, curve } = await createOnchain(
+        address,
+        { name: f.name.trim(), symbol },
+        (hash) => {
+          setPendingHash(hash);
+          setPendingMeta(meta);
+          sessionStorage.setItem("orvex-pending-launch", JSON.stringify({ hash, meta }));
+        },
+      );
       setDeploy({ p: 65, label: "Indexing your token" });
       setPendingHash(hash);
       const r = await doIndex({
@@ -415,7 +421,8 @@ function Create() {
           {pendingHash && !deploy && (
             <div role="status" className="space-y-3 rounded-lg border border-border p-4">
               <p className="text-sm">
-                Launch transaction submitted. Do not deploy again; check confirmation and retry adding it to the market.
+                Launch transaction submitted. Do not deploy again; check confirmation and retry
+                adding it to the market.
               </p>
               <div className="flex gap-2">
                 <Button
@@ -423,7 +430,9 @@ function Create() {
                   onClick={async () => {
                     setDeploy({ p: 65, label: "Retrying market indexing" });
                     try {
-                      const result = await doIndex({ data: { txHash: pendingHash, meta: pendingMeta } });
+                      const result = await doIndex({
+                        data: { txHash: pendingHash, meta: pendingMeta },
+                      });
                       if ("error" in result) toast.error(result.error);
                       else {
                         clearPending();

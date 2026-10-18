@@ -14,17 +14,25 @@ export function transactionAmount(value: number | string, decimals = 18): bigint
 export function minimumOutput(amount: bigint, slippageBps: number): bigint {
   if (!Number.isInteger(slippageBps) || slippageBps < 0 || slippageBps >= 10_000)
     throw new Error("Invalid slippage tolerance");
-  const result = amount * BigInt(10_000 - slippageBps) / 10_000n;
+  const result = (amount * BigInt(10_000 - slippageBps)) / 10_000n;
   if (result <= 0n) throw new Error("Output is too small to protect this trade");
   return result;
 }
 
 export const assetKey = (address: Address | null) => address?.toLowerCase() ?? "native";
 
-export function validateSwapPath(from: Address | null, to: Address | null, wrapped: Address, path: Address[]) {
+export function validateSwapPath(
+  from: Address | null,
+  to: Address | null,
+  wrapped: Address,
+  path: Address[],
+) {
   if (assetKey(from) === assetKey(to)) throw new Error("Pick two different tokens");
-  if (path.length < 2 || path.length > 3 ||
-      assetKey(path[0] ?? null) !== assetKey(from ?? wrapped) ||
-      assetKey(path[path.length - 1] ?? null) !== assetKey(to ?? wrapped))
+  if (
+    path.length < 2 ||
+    path.length > 3 ||
+    assetKey(path[0] ?? null) !== assetKey(from ?? wrapped) ||
+    assetKey(path[path.length - 1] ?? null) !== assetKey(to ?? wrapped)
+  )
     throw new Error("Swap route changed; request a fresh quote");
 }

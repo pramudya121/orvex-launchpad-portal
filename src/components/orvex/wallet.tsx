@@ -18,10 +18,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const eth = injected();
     if (!eth) return;
     if (localStorage.getItem(KIND_KEY) === "injected") {
-      eth.request({ method: "eth_accounts" }).then((a) => {
-        const acc = (a as string[])[0];
-        if (acc) setAddress(getAddress(acc));
-      }).catch(() => {});
+      eth
+        .request({ method: "eth_accounts" })
+        .then((a) => {
+          const acc = (a as string[])[0];
+          if (acc) setAddress(getAddress(acc));
+        })
+        .catch(() => {});
     }
     const onAcc = (...args: unknown[]) => {
       if (localStorage.getItem(KIND_KEY) !== "injected") return;
@@ -35,7 +38,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const open = async () => {
     const eth = injected();
     if (!eth) {
-      toast.error("No browser wallet found", { description: "Install MetaMask, Rabby or OKX Wallet, then refresh." });
+      toast.error("No browser wallet found", {
+        description: "Install MetaMask, Rabby or OKX Wallet, then refresh.",
+      });
       return;
     }
     try {
