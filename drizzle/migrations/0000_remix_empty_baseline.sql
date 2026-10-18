@@ -1,2 +1,0 @@
--- Empty migration baseline for this remixed project.
--- Intentionally contains no schema or data changes.
