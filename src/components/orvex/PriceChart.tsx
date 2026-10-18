@@ -5,23 +5,17 @@ import type { TradeView } from "@/lib/launchpad.functions";
 import { CURVE } from "@/lib/curve";
 import { cn } from "@/lib/utils";
 
-function cssVar(name: string) {
-  const el = document.createElement("div");
-  el.style.color = `var(${name})`;
-  document.body.appendChild(el);
-  const c = getComputedStyle(el).color;
-  el.remove();
-  return c;
-}
+// lightweight-charts cannot parse oklch() strings — use fixed sRGB values matching the theme.
+const COLORS = { up: "#34d399", down: "#f87171", text: "#94a3b8", grid: "rgba(148, 163, 184, 0.12)" };
 
 export function PriceChart({ trades }: { trades: TradeView[] }) {
   const ref = useRef<HTMLDivElement>(null);
-  const api = useRef<{ chart: IChartApi; c: ISeriesApi<"Candlestick">; v: ISeriesApi<"Histogram">; up: string; down: string } | null>(null);
+  const api = useRef<{ chart: IChartApi; c: ISeriesApi<"Candlestick">; v: ISeriesApi<"Histogram"> } | null>(null);
   const [tf, setTf] = useState<Timeframe>("1m");
 
   useEffect(() => {
     if (!ref.current) return;
-    const up = cssVar("--success"), down = cssVar("--danger"), fg = cssVar("--muted-foreground"), grid = cssVar("--border");
+    const { up, down, text: fg, grid } = COLORS;
     const chart = createChart(ref.current, {
       autoSize: true,
       layout: { background: { color: "transparent" }, textColor: fg, fontFamily: "JetBrains Mono, monospace" },
