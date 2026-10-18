@@ -1,7 +1,8 @@
 # ORVEX improvements
 
-- [ ] Restrict Admin content and navigation to the connected FeeManager owner.
-- [ ] Refresh Trending, Leaderboard and Portfolio presentation and verify navigation and layouts.
+- [x] Restrict Admin content and navigation to the connected FeeManager owner; test owner/non-owner eligibility and disconnected direct access.
+- [x] Refresh Trending, Leaderboard and Portfolio; verify 24H/7D, ranking tabs/search, public portfolio balances and activity, and mobile layouts.
+- [ ] Verify Admin console with a real owner wallet — blocked by no connected signing owner wallet.
 
 - [x] Harden pending-launch recovery across refresh, verify wallet chain/account, protect integer transaction limits and DEX address-based quotes; add regression tests.
 - [x] Serialize chain synchronization with private durable leases and conditional checkpoints.
@@ -16,7 +17,7 @@
 - [x] Upgrade Create, Leaderboard, DEX and Portfolio usability and error states.
 - [x] Verify seven public pages, Create validation, URL filters, real DEX quotes, mobile layout and eleven tests.
 - [x] Keep the raised/24h-volume row out of the token card and shorten the card (4:3 artwork, tighter rows, 165px grid columns); lock it with a render test.
-- [ ] Verify funded wallet launch, buy, sell and portfolio readback — blocked by no connected funded testnet wallet or existing factory tokens.
-- [ ] Verify populated grid/table and event delivery end-to-end — blocked by the connected factory and database having zero token launches.
+- [ ] Verify funded wallet launch, buy and sell — blocked by no connected funded signing testnet wallet; public portfolio readback verified separately.
+- [ ] Verify live event delivery after a new transaction — blocked by no connected funded signing testnet wallet; populated market display verified separately.
 - [x] Obtain available database security results — remaining informational notices concern intentionally public token/trade data.
 - [ ] Verify deployed contract security independently — blocked by missing contract source and no external contract audit; database scans do not audit contracts.
