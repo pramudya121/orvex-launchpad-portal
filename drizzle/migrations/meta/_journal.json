@@ -15,6 +15,13 @@
       "when": 1792329497847,
       "tag": "0001_onchain_indexing",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792330187848,
+      "tag": "0002_onchain_curve_fields",
+      "breakpoints": true
     }
   ]
 }
