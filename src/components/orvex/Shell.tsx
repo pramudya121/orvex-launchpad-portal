@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Compass, Flame, Home, Plus, Search, Wallet, PieChart } from "lucide-react";
+import { Compass, Flame, Home, Plus, Search, Wallet, PieChart, Trophy, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { short } from "@/lib/tokens";
@@ -14,6 +14,8 @@ const NAV = [
   { to: "/explore", label: "Explore", icon: Compass },
   { to: "/trending", label: "Trending", icon: Flame },
   { to: "/create", label: "Create", icon: Plus },
+  { to: "/dex", label: "DEX", icon: ArrowLeftRight },
+  { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { to: "/portfolio", label: "Portfolio", icon: PieChart },
 ] as const;
 

@@ -40,7 +40,7 @@ function Index() {
           <span className="text-gradient">Digital silver</span> for your next memecoin.
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-muted-foreground">
-          Every token starts on the same bonding curve. When {(CURVE.curveSupply / 1e6).toFixed(0)}M tokens are bought, liquidity graduates to the DEX automatically.
+          Every token starts on the same bonding curve. When the curve sells out, liquidity graduates to the ORVEX DEX automatically.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Button asChild size="lg" className="bg-gradient-primary shadow-glow"><Link to="/create"><Rocket /> Create Token</Link></Button>
