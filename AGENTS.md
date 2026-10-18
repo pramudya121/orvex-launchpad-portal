@@ -33,3 +33,6 @@
 - Portfolio chain balance reads use the shared six-slot bounded mapper to respect deployed outbound concurrency while preserving result order.
 - Create allocation information reads deployed bonding-curve constants and derives percentages, so presentation stays aligned with contract supply.
 - DEX separates Swap, Liquidity positions and Pools with design-system tabs; positions read actual LP balances, not inferred swap holdings.
+- Explore and DEX token selectors use cursor token pages; factory pools use bounded incremental index pages to avoid unbounded reads.
+- Logo size and image signatures are validated server-side before storage; the same byte limit is enforced at file selection and bucket level.
+- DEX liquidity uses integer reserve-ratio quotes, exact approvals, simulation and receipt confirmation; submitted liquidity hashes survive refresh to prevent duplicate submission.

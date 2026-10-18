@@ -19,8 +19,8 @@ import { DexLogo, DexTokenPicker } from "./DexTokenPicker";
 export function LiquidityPanel({ selected }: { selected?: { a: DexToken; b: DexToken } | null }) {
   const { address, open } = useWallet();
   const qc = useQueryClient();
-  const [a, setA] = useState<DexToken>(DEX_TOKENS[0]);
-  const [b, setB] = useState<DexToken>(DEX_TOKENS[2]);
+  const [a, setA] = useState<DexToken>(DEX_TOKENS[0] ?? { symbol: "zkLTC", name: "zkLTC", address: null, logo: null, decimals: 18 });
+  const [b, setB] = useState<DexToken>(DEX_TOKENS[2] ?? { symbol: "ORVX", name: "ORVEX", address: null, logo: null, decimals: 18 });
   const [mode, setMode] = useState<"add" | "remove">("add");
   const [inputA, setInputA] = useState("");
   const [inputB, setInputB] = useState("");
@@ -82,7 +82,7 @@ export function LiquidityPanel({ selected }: { selected?: { a: DexToken; b: DexT
         sessionStorage.setItem("orvex-pending-liquidity", JSON.stringify(value));
       });
       clearPending(); invalidate(); setInputA(""); setInputB("");
-    } catch (e) { setStatus((old) => ({ phase: "error", label: walletError(e), hash: old?.hash })); }
+    } catch (e) { setStatus((old) => ({ phase: "error", label: walletError(e), ...(old?.hash ? { hash: old.hash } : {}) })); }
     finally { setBusy(false); }
   };
   return <section className="mx-auto max-w-md space-y-5 rounded-lg border border-border bg-card p-5" aria-label="Manage liquidity">
