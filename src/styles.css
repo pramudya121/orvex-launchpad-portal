@@ -212,3 +212,13 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@utility animate-ticker {
+  animation: ticker-scroll 60s linear infinite;
+  &:hover { animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+}
