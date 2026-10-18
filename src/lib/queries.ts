@@ -1,5 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { getLeaderboard, getPortfolio, getTokenDetail, listTokens, listTokenPage } from "./launchpad.functions";
+import { getLeaderboard, getPortfolio, getTokenDetail, listTokens, listTokenPage, listLiveTrades } from "./launchpad.functions";
 
 export const tokenPagesQuery = (q = "", stage: "all" | "curve" | "graduated" | "favorites" = "all", favorites: string[] = []) => infiniteQueryOptions({
   queryKey: ["tokens", "pages", q, stage, favorites],
@@ -34,4 +34,11 @@ export const leaderboardQuery = () =>
     queryFn: () => getLeaderboard(),
     staleTime: 15_000,
     refetchInterval: 30_000,
+  });
+
+export const liveTradesQuery = () =>
+  queryOptions({
+    queryKey: ["live-trades"],
+    queryFn: () => listLiveTrades(),
+    refetchInterval: 10_000,
   });

@@ -8,8 +8,9 @@ import { fmtUsd, fmtNum, fmtAge, short } from "@/lib/tokens";
 import { portfolioQuery } from "@/lib/queries";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
 import { TokenCard } from "@/components/orvex/TokenCard";
-import { MarketHeading, MarketStats } from "@/components/orvex/MarketHeading";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+const ALLOC = ["bg-primary", "bg-success", "bg-warning", "bg-primary-glow", "bg-danger", "bg-accent"];
 
 export const Route = createFileRoute("/portfolio")({
   head: () => ({
@@ -81,62 +82,64 @@ function Portfolio() {
 
   return (
     <div className="space-y-6">
-      <MarketHeading
-        label="Your positions"
-        title="Portfolio"
-        description={`${short(address)} · Live on-chain balances · Indicative USD`}
-        icon={<Wallet className="size-3.5" />}
-        action={
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Refresh portfolio"
-            title="Refresh portfolio"
-            disabled={isFetching}
-            onClick={() => refetch()}
-          >
-            <RefreshCw className={isFetching ? "animate-spin" : ""} />
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--primary)_0%,transparent_60%)] opacity-20" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="grid size-14 place-items-center rounded-2xl bg-gradient-primary shadow-glow">
+              <Wallet className="size-6 text-primary-foreground" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Portfolio value</p>
+              <p className="font-mono text-3xl font-black md:text-4xl">{fmtUsd(total)}</p>
+              <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-mono">{short(address)}</span>
+                <span className={pnl >= 0 ? "text-success" : "text-danger"}>
+                  {pnl >= 0 ? "+" : "−"}{fmtUsd(Math.abs(pnl))}{cost > 0 ? ` (${((pnl / cost) * 100).toFixed(2)}%)` : ""}
+                </span>
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" disabled={isFetching} onClick={() => refetch()}>
+            <RefreshCw className={isFetching ? "animate-spin" : ""} /> Refresh
           </Button>
-        }
-      />
+        </div>
+        {total > 0 && (
+          <div className="relative mt-6">
+            <div className="flex h-2.5 overflow-hidden rounded-full bg-surface">
+              {data.holdings.map((h, i) => (
+                <div key={h.token.id} title={h.token.symbol} className={ALLOC[i % ALLOC.length]} style={{ width: `${(h.valueUsd / total) * 100}%` }} />
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+              {data.holdings.slice(0, 6).map((h, i) => (
+                <span key={h.token.id} className="flex items-center gap-1.5">
+                  <span className={`size-2 rounded-full ${ALLOC[i % ALLOC.length]}`} />
+                  {h.token.symbol} <span className="font-mono text-muted-foreground">{((h.valueUsd / total) * 100).toFixed(1)}%</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
       {data.partial && (
         <p role="status" className="text-sm text-danger">
           This wallet exceeds the current history limit. Totals may be incomplete.
         </p>
       )}
-      <MarketStats
-        items={[
-          {
-            label: "Portfolio value",
-            value: fmtUsd(total),
-            detail: "Live balances × indicative price",
-            icon: <Wallet className="size-4" />,
-          },
-          {
-            label: "Value − net spend",
-            value: (
-              <span className={pnl >= 0 ? "text-success" : "text-danger"}>
-                {pnl >= 0 ? "+" : "−"}
-                {fmtUsd(Math.abs(pnl))}
-              </span>
-            ),
-            detail: "Curve activity only · Not PNL",
-            icon: <ArrowUpRight className="size-4" />,
-          },
-          {
-            label: "Assets held",
-            value: data.holdings.length,
-            detail: "Nonzero on-chain token balances",
-            icon: <Coins className="size-4" />,
-          },
-          {
-            label: "Your launches",
-            value: data.created.length,
-            detail: "Tokens created by this wallet",
-            icon: <Rocket className="size-4" />,
-          },
-        ]}
-      />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { l: "Net spend", v: fmtUsd(cost), i: <Coins className="size-3.5" /> },
+          { l: "Value − spend", v: `${pnl >= 0 ? "+" : "−"}${fmtUsd(Math.abs(pnl))}`, i: <ArrowUpRight className="size-3.5" />, c: pnl >= 0 ? "text-success" : "text-danger" },
+          { l: "Assets held", v: String(data.holdings.length), i: <Wallet className="size-3.5" /> },
+          { l: "Your launches", v: String(data.created.length), i: <Rocket className="size-3.5" /> },
+        ].map((x) => (
+          <div key={x.l} className="rounded-xl border border-border bg-card/70 p-4">
+            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-muted-foreground">{x.i} {x.l}</p>
+            <p className={`mt-2 font-mono text-xl font-bold ${x.c ?? ""}`}>{x.v}</p>
+          </div>
+        ))}
+      </div>
       <p className="text-[10px] text-muted-foreground">
         *Not an accounting PNL calculation. Transfers, DEX trades and gas costs are excluded. USD
         reference: $85 per zkLTC.
@@ -149,11 +152,11 @@ function Portfolio() {
         </TabsList>
         <TabsContent value="holdings" className="mt-5">
           {data.holdings.length ? (
-            <div className="overflow-x-auto border-y border-border">
+            <div className="overflow-x-auto rounded-xl border border-border bg-card/70">
               <table className="w-full min-w-[540px] text-sm">
                 <thead className="text-left text-xs text-muted-foreground">
                   <tr>
-                    {["Token", "Balance", "Value", "Value − spend", ""].map((h) => (
+                    {["Token", "Balance", "Value", "Allocation", "Value − spend", ""].map((h) => (
                       <th key={h} className="px-4 py-3 font-medium">
                         {h}
                       </th>
@@ -175,6 +178,12 @@ function Portfolio() {
                       </td>
                       <td className="px-4 py-3 font-mono">{fmtNum(balance)}</td>
                       <td className="px-4 py-3 font-mono">{fmtUsd(valueUsd)}</td>
+                      <td className="w-36 px-4 py-3">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-surface">
+                          <div className="h-full rounded-full bg-primary" style={{ width: `${total ? (valueUsd / total) * 100 : 0}%` }} />
+                        </div>
+                        <span className="font-mono text-[10px] text-muted-foreground">{total ? ((valueUsd / total) * 100).toFixed(1) : "0"}%</span>
+                      </td>
                       <td
                         className={
                           valueUsd >= costUsd
@@ -231,7 +240,7 @@ function Portfolio() {
           {data.history.length > 0 && (
             <>
               <h2 className="text-lg font-semibold">Recent activity</h2>
-              <div className="divide-y divide-border border-y border-border font-mono text-xs">
+              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card/70 font-mono text-xs">
                 {data.history.map((h) => (
                   <div key={h.id} className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-4">
                     <span className={h.side === "buy" ? "text-success" : "text-danger"}>
