@@ -1,7 +1,7 @@
 # ORVEX improvements
 
-- [ ] Use uploaded ORVEX logo in the website header and favicon.
-- [ ] Strengthen critical database-backed chain indexing and validate the changes.
+- [x] Use uploaded ORVEX logo in the website header and favicon.
+- [x] Add launch/trade block provenance, genesis-free first scans, explicit database error handling and database market aggregates; verify public RPC and 15 tests.
 
 - [x] Check database coverage; add event-level trade indexing and Realtime publication; fix reverting multicall reads.
 - [x] Compact Explore grid/table with matching filters, watchlist and Buy/Sell navigation.
