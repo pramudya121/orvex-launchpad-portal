@@ -29,6 +29,13 @@
       "when": 1792334410846,
       "tag": "0003_indexed_market_statistics",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792334814140,
+      "tag": "0004_exclusive_chain_sync_lease",
+      "breakpoints": true
     }
   ]
 }
