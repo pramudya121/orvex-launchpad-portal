@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@tanstack/react-router", async () => {
   const React = await import("react");
   return {
-    Link: ({ children, ...props }: { children?: React.ReactNode }) =>
+    Link: ({ children, ...props }: { children?: ReactNode }) =>
       React.createElement("a", props, children),
   };
 });
