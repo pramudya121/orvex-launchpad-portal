@@ -30,3 +30,6 @@
 - Admin navigation and console share a fail-closed live FeeManager owner query; this is a presentation gate only, while the deployed contract remains the authority for privileged transactions.
 - Market pages reuse MarketHeading and MarketStats for consistent hierarchy without adding extra network requests.
 - Lifetime market windows use the RLS-respecting token_market_all_stats RPC, not a capped browser trade feed, to keep All metrics consistent across grid and table.
+- Portfolio chain balance reads use the shared six-slot bounded mapper to respect deployed outbound concurrency while preserving result order.
+- Create allocation information reads deployed bonding-curve constants and derives percentages, so presentation stays aligned with contract supply.
+- DEX separates Swap, Liquidity positions and Pools with design-system tabs; positions read actual LP balances, not inferred swap holdings.

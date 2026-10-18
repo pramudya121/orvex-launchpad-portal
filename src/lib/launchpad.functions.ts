@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { CURVE, marketCapBase, progress, spotPrice, type Reserves } from "./curve";
 import { activeHolders } from "./market";
+import { boundedMap } from "./bounded-map";
 
 type TokenRow = Database["public"]["Tables"]["tokens"]["Row"];
 type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
@@ -191,7 +192,7 @@ export const getTokenDetail = createServerFn({ method: "GET" })
       .from("tokens")
       .select("*")
       .eq("onchain", true)
-      .ilike("symbol", data.symbol)
+      .eq("symbol", data.symbol.toUpperCase())
       .order("created_at")
       .limit(1)
       .maybeSingle();
@@ -296,15 +297,14 @@ export const getPortfolio = createServerFn({ method: "GET" })
     const { formatEther } = await import("viem");
     const c = chainClient();
     const list = tokens ?? [];
-    const bals = await Promise.all(
-      list.map((t) =>
+    const bals = await boundedMap(
+      list, (t) =>
         c.readContract({
           address: t.address as `0x${string}`,
           abi: launchTokenAbi,
           functionName: "balanceOf",
           args: [data.address as `0x${string}`],
         }),
-      ),
     );
     const holdings = list
       .map((t, i) => {
