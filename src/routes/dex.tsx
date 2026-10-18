@@ -2,7 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { formatUnits, type Address } from "viem";
-import { ArrowDownUp, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
+import {
+  ArrowDownUp,
+  ChevronDown,
+  ExternalLink,
+  Loader2,
+  Search,
+  Droplets,
+  RefreshCw,
+  ArrowUpRight,
+  Layers,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,9 +214,14 @@ function Dex() {
         </div>
         <MarketStatus />
       </div>
-      <div className="grid min-w-0 gap-8 xl:grid-cols-[400px_minmax(0,1fr)]">
-        <div className="min-w-0 border border-border bg-card h-fit rounded-lg p-5">
-          <h1 className="mb-4 text-xl font-bold">Swap</h1>
+      <div className="grid min-w-0 gap-8 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="min-w-0 border border-border bg-card h-fit rounded-lg p-5 lg:sticky lg:top-24">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Swap</h2>
+            <span className="flex items-center gap-1.5 text-[10px] text-success">
+              <span className="size-1.5 rounded-full bg-success" /> Live quotes
+            </span>
+          </div>
           <Side
             label="You pay"
             t={from}
@@ -312,7 +327,13 @@ function Dex() {
           </Button>
         </div>
 
-        <Pools />
+        <Pools
+          onSelect={(a, b) => {
+            setFrom(a);
+            setTo(b);
+            setAmt("");
+          }}
+        />
       </div>
 
       <Dialog open={!!picker} onOpenChange={(o) => !o && setPicker(null)}>
@@ -388,8 +409,9 @@ function Side({
 }
 
 /** Live pool list read straight from the DEX factory. */
-function Pools() {
-  const { data, isLoading, isError, refetch } = useQuery({
+function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
+  const [search, setSearch] = useState("");
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["pools"],
     queryFn: async () => {
       const pc = publicClient();
@@ -437,65 +459,145 @@ function Pools() {
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+  const list = (data ?? []).filter((p) =>
+    `${p.a.symbol} ${p.b.symbol} ${p.pair}`.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+  const active = (data ?? []).filter((p) => p.r0 > 0 && p.r1 > 0).length;
   return (
-    <div className="min-w-0 space-y-3">
-      <h2 className="text-lg font-semibold">Pools</h2>
-      <div className="glass overflow-x-auto rounded-lg">
-        {isError ? (
-          <div role="alert" className="p-8 text-center text-sm text-danger">
-            Pool data unavailable.
-            <Button variant="link" onClick={() => refetch()}>
-              Retry
-            </Button>
+    <section className="min-w-0 space-y-5" aria-label="Liquidity pools">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase text-primary">
+            <Droplets className="size-3" /> Liquidity markets
           </div>
-        ) : isLoading ? (
-          <div className="h-40 animate-pulse" />
-        ) : !data?.length ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">No pools yet.</div>
-        ) : (
-          <table className="w-full min-w-[480px] text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
-              <tr>
-                {["Pool", "Reserves", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 font-medium">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {data.map((p) => (
-                <tr key={p.pair}>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        <Logo t={p.a} size={24} />
-                        <Logo t={p.b} size={24} />
-                      </div>
-                      <span className="font-semibold">
-                        {p.a.symbol} / {p.b.symbol}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">
-                    {fmtNum(p.r0)} {p.a.symbol} · {fmtNum(p.r1)} {p.b.symbol}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+          <h2 className="text-xl font-semibold">Pools</h2>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          title="Refresh pools"
+          aria-label="Refresh pools"
+          disabled={isFetching}
+          onClick={() => refetch()}
+        >
+          <RefreshCw className={isFetching ? "animate-spin" : ""} />
+        </Button>
+      </div>
+      <div className="grid grid-cols-3 divide-x divide-border border-y border-border py-4">
+        <div className="pr-3">
+          <p className="text-[10px] uppercase text-muted-foreground">Indexed pools</p>
+          <p className="mt-2 font-mono text-xl font-semibold">{data ? data.length : "—"}</p>
+        </div>
+        <div className="px-3">
+          <p className="text-[10px] uppercase text-muted-foreground">With reserves</p>
+          <p className="mt-2 font-mono text-xl font-semibold text-success">{data ? active : "—"}</p>
+        </div>
+        <div className="pl-3">
+          <p className="text-[10px] uppercase text-muted-foreground">Network</p>
+          <p className="mt-2 text-sm font-semibold">LiteForge</p>
+          <p className="text-[10px] text-muted-foreground">Testnet</p>
+        </div>
+      </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          aria-label="Search pools"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search token or pool address"
+          className="pl-9"
+        />
+      </div>
+      {isError ? (
+        <div role="alert" className="border-y border-border py-10 text-center text-sm text-danger">
+          Pool data unavailable.
+          <Button variant="link" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
+      ) : isLoading ? (
+        <div aria-label="Loading pools" className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-lg bg-card" />
+          ))}
+        </div>
+      ) : !list.length ? (
+        <div className="border-y border-border py-12 text-center">
+          <Layers className="mx-auto size-7 text-muted-foreground" />
+          <h3 className="mt-3 text-sm font-semibold">
+            {search ? "No matching pools" : "No pools yet"}
+          </h3>
+          {search && (
+            <Button variant="link" onClick={() => setSearch("")}>
+              Clear search
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="max-h-[640px] overflow-y-auto overscroll-contain divide-y divide-border border-y border-border pr-2" tabIndex={0} aria-label="Pool list">
+          {list.map((p) => (
+            <div key={p.pair} className="group py-4 transition-colors hover:bg-surface/30">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex shrink-0 -space-x-2">
+                    <Logo t={p.a} size={32} />
+                    <Logo t={p.b} size={32} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="break-words text-sm font-semibold">
+                      {p.a.symbol} <span className="text-muted-foreground">/</span> {p.b.symbol}
+                    </h3>
                     <a
                       href={explorerAddress(p.pair)}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-primary"
+                      aria-label={`Pool ${p.a.symbol} ${p.b.symbol} explorer`}
                     >
-                      Explorer <ExternalLink className="size-3" />
+                      {short(p.pair)}
+                      <ExternalLink className="size-3" />
                     </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={
+                      p.r0 > 0 && p.r1 > 0
+                        ? "text-[10px] text-success"
+                        : "text-[10px] text-muted-foreground"
+                    }
+                  >
+                    {p.r0 > 0 && p.r1 > 0 ? "Active" : "No liquidity"}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={p.r0 <= 0 || p.r1 <= 0}
+                    aria-label={`Swap ${p.a.symbol} ${p.b.symbol}`}
+                    onClick={() => onSelect(p.a, p.b)}
+                  >
+                    Swap
+                    <ArrowUpRight className="size-3" />
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <div className="min-w-0">
+                  <p className="text-[10px] text-muted-foreground">{p.a.symbol} reserve</p>
+                  <p className="mt-1 break-words font-mono text-sm">{fmtNum(p.r0, 4)}</p>
+                </div>
+                <div className="min-w-0 border-l border-border pl-4">
+                  <p className="text-[10px] text-muted-foreground">{p.b.symbol} reserve</p>
+                  <p className="mt-1 break-words font-mono text-sm">{fmtNum(p.r1, 4)}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[10px] leading-relaxed text-muted-foreground">
+        First 50 factory pools · Reserves refresh every 30 seconds · Test assets
+      </p>
+    </section>
   );
 }

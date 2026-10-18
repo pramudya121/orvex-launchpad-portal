@@ -5,7 +5,13 @@ import { LayoutGrid, List, Search, X, Compass } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { tokensQuery } from "@/lib/queries";
-import { filterMarket, MARKET_SORTS, MARKET_WINDOWS, type MarketSort, type MarketWindow } from "@/lib/market";
+import {
+  filterMarket,
+  MARKET_SORTS,
+  MARKET_WINDOWS,
+  type MarketSort,
+  type MarketWindow,
+} from "@/lib/market";
 import { TokenCard, TokenCardSkeleton } from "@/components/orvex/TokenCard";
 import { MarketTable } from "@/components/orvex/MarketTable";
 import { MarketStatus } from "@/components/orvex/MarketStatus";
@@ -15,7 +21,13 @@ import { MarketError, MarketNotFound } from "@/components/orvex/RouteFeedback";
 export const Route = createFileRoute("/explore")({
   validateSearch: (
     s: Record<string, unknown>,
-  ): { q?: string; sort?: MarketSort; stage?: string; view?: "grid" | "list"; win?: MarketWindow } => ({
+  ): {
+    q?: string;
+    sort?: MarketSort;
+    stage?: string;
+    view?: "grid" | "list";
+    win?: MarketWindow;
+  } => ({
     q: typeof s["q"] === "string" ? s["q"] : "",
     sort: MARKET_SORTS.includes(s["sort"] as MarketSort)
       ? (s["sort"] as MarketSort)
@@ -24,7 +36,9 @@ export const Route = createFileRoute("/explore")({
       ? String(s["stage"])
       : "all",
     view: s["view"] === "list" ? ("list" as const) : ("grid" as const),
-    win: MARKET_WINDOWS.includes(s["win"] as MarketWindow) ? (s["win"] as MarketWindow) : ("24h" as MarketWindow),
+    win: MARKET_WINDOWS.includes(s["win"] as MarketWindow)
+      ? (s["win"] as MarketWindow)
+      : ("24h" as MarketWindow),
   }),
   head: () => ({
     meta: [
@@ -147,18 +161,22 @@ function Explore() {
             </option>
           ))}
         </select>
-        <div className="flex items-center gap-1 rounded-md border border-input bg-card p-0.5">
-          {MARKET_WINDOWS.map((w) => (
-            <button
-              key={w}
-              onClick={() => update({ win: w })}
-              className={`rounded px-2.5 py-1 font-mono text-[11px] font-semibold uppercase transition ${
-                s.win === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {w}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase text-muted-foreground">Window</span>
+          <div className="flex items-center gap-1 rounded-full border border-input bg-card p-1">
+            {MARKET_WINDOWS.map((w) => (
+              <Button
+                key={w}
+                variant={s.win === w ? "default" : "ghost"}
+                size="sm"
+                aria-pressed={s.win === w}
+                onClick={() => update({ win: w })}
+                className="h-7 rounded-full px-3 text-xs"
+              >
+                {w === "all" ? "All" : w.toUpperCase()}
+              </Button>
+            ))}
+          </div>
         </div>
         <div className="flex gap-1">
           <Button
