@@ -345,7 +345,7 @@ function SwapPanel({ t }: { t: TokenView }) {
   const q = quote && !("error" in quote) ? quote : null;
 
   const submit = async () => {
-    if (!address || !q || !t.curveAddress) return;
+    if (!address || !q || !t.curveAddress || busy) return;
     setBusy(true);
     try {
       if (side === "buy" && !(await antiBotCheck(address, n))) {
@@ -357,12 +357,12 @@ function SwapPanel({ t }: { t: TokenView }) {
       }
       const hash =
         side === "buy"
-          ? await buyOnchain(address, t.curveAddress as Address, n, q.tokenAmount)
+          ? await buyOnchain(address, t.curveAddress as Address, amt, q.tokenAmount)
           : await sellOnchain(
               address,
               t.address as Address,
               t.curveAddress as Address,
-              n,
+              amt,
               q.baseAmount,
             );
       const r = await doIndex({ data: { txHash: hash } });

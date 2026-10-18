@@ -1,6 +1,6 @@
 // Browser-side contract calls. Each returns the confirmed tx hash; the caller then
 // asks the server to index it (indexTx) so lists, charts and leaderboard update.
-import { parseEventLogs, parseEther, parseUnits, zeroAddress, type Address, type Hash } from "viem";
+import { parseEventLogs, parseEther, zeroAddress, type Address, type Hash } from "viem";
 import {
   antiBotAbi,
   bondingCurveAbi,
@@ -15,7 +15,22 @@ import { CURVE } from "../curve";
 import { minimumOutput, transactionAmount, validateSwapPath } from "./trade-safety";
 
 const toWei = transactionAmount;
-const minOut = (n: number, d = 18) => minimumOutput(toWei(n, d), Math.round(CURVE.slippage * 10_000));
+
+async function curveMinimum(curve: Address, amount: bigint, side: "buy" | "sell") {
+  const pc = publicClient();
+  const [reserves, protocol, creator] = await Promise.all([
+    pc.readContract({ address: curve, abi: bondingCurveAbi, functionName: "getReserves" }),
+    pc.readContract({ address: curve, abi: bondingCurveAbi, functionName: "protocolFeeBps" }),
+    pc.readContract({ address: curve, abi: bondingCurveAbi, functionName: "creatorFeeBps" }),
+  ]);
+  const [vToken, vBase, remaining] = reserves;
+  const fees = protocol + creator;
+  if (fees >= 10_000n) throw new Error("Curve fees are invalid");
+  const net = side === "buy" ? amount - amount * fees / 10_000n : amount;
+  const quoted = await pc.readContract({ address: curve, abi: bondingCurveAbi, functionName: "getAmountOut", args: [net, side === "buy" ? vBase : vToken, side === "buy" ? vToken : vBase] });
+  const output = side === "buy" ? (quoted > remaining ? remaining : quoted) : quoted - quoted * fees / 10_000n;
+  return minimumOutput(output, Math.round(CURVE.slippage * 10_000));
+}
 
 async function confirm(hash: Hash) {
   const r = await publicClient().waitForTransactionReceipt({ hash });
@@ -60,17 +75,19 @@ export async function antiBotCheck(account: Address, baseIn: number) {
 export async function buyOnchain(
   account: Address,
   curve: Address,
-  baseIn: number,
-  expectedTokens: number,
+  baseIn: number | string,
+  _expectedTokens: number,
 ) {
+  const amount = toWei(baseIn);
+  const minimum = await curveMinimum(curve, amount, "buy");
   const w = await walletClient(account);
   return confirm(
     await w.writeContract({
       address: curve,
       abi: bondingCurveAbi,
       functionName: "buy",
-      args: [minOut(expectedTokens)],
-      value: toWei(baseIn),
+      args: [minimum],
+      value: amount,
     }),
   );
 }
@@ -79,18 +96,19 @@ export async function sellOnchain(
   account: Address,
   token: Address,
   curve: Address,
-  tokensIn: number,
-  expectedBase: number,
+  tokensIn: number | string,
+  _expectedBase: number,
 ) {
   const amount = toWei(tokensIn);
   await ensureAllowance(account, token, curve, amount);
+  const minimum = await curveMinimum(curve, amount, "sell");
   const w = await walletClient(account);
   return confirm(
     await w.writeContract({
       address: curve,
       abi: bondingCurveAbi,
       functionName: "sell",
-      args: [amount, minOut(expectedBase)],
+      args: [amount, minimum],
     }),
   );
 }
@@ -104,7 +122,7 @@ export async function creationFee() {
 }
 
 /** Launches a token through LaunchpadFactory; returns the tx hash and the new token/curve addresses. */
-export async function createOnchain(account: Address, p: { name: string; symbol: string }) {
+export async function createOnchain(account: Address, p: { name: string; symbol: string }, onSubmitted?: (hash: Hash) => void) {
   const fee = await creationFee();
   const pc = publicClient();
   await pc.simulateContract({
@@ -116,15 +134,15 @@ export async function createOnchain(account: Address, p: { name: string; symbol:
     value: fee,
   });
   const w = await walletClient(account);
-  const hash = await confirm(
-    await w.writeContract({
+  const hash = await w.writeContract({
       address: CONTRACTS.factory,
       abi: factoryAbi,
       functionName: "createToken",
       args: [p.name, p.symbol],
       value: fee,
-    }),
-  );
+    });
+  onSubmitted?.(hash);
+  await confirm(hash);
   const receipt = await pc.getTransactionReceipt({ hash });
   const launch = parseEventLogs({
     abi: factoryAbi,

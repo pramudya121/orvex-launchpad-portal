@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { formatUnits, parseUnits, type Address } from "viem";
+import { formatUnits, type Address } from "viem";
 import { ArrowDownUp, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { tokensQuery } from "@/lib/queries";
 import { MarketStatus } from "@/components/orvex/MarketStatus";
 import { fmtNum, short } from "@/lib/tokens";
 import { assetKey, minimumOutput, transactionAmount } from "@/lib/web3/trade-safety";
+import { launchTokenAbi } from "@/lib/web3/abi";
 
 export const Route = createFileRoute("/dex")({
   head: () => ({
@@ -150,6 +151,13 @@ function Dex() {
     if (!address || !quote || amt !== debounced || isFetching || busy) return;
     setBusy(true);
     try {
+      const pc = publicClient();
+      const [fromDecimals, toDecimals] = await Promise.all([
+        from.address ? pc.readContract({ address: from.address, abi: launchTokenAbi, functionName: "decimals" }) : 18,
+        to.address ? pc.readContract({ address: to.address, abi: launchTokenAbi, functionName: "decimals" }) : 18,
+      ]);
+      if (Number(fromDecimals) !== from.decimals || Number(toDecimals) !== to.decimals)
+        throw new Error("Token precision differs from this listing; swap stopped for your protection");
       const fresh = isWrap ? { path: [] as Address[], amountOut: amountIn } : await quoteSwap(from.address, to.address, amountIn);
       if (!fresh) throw new Error("No liquidity for this pair yet");
       const min = minimumOutput(quote.amountOut, Math.round(slippage * 100));

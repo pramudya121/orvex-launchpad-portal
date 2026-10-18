@@ -10,7 +10,7 @@ import { buyOnchain, createOnchain, creationFee, walletError } from "@/lib/web3/
 import { CONTRACTS, explorerTx } from "@/lib/web3/chain";
 import { publicClient } from "@/lib/web3/client";
 import { bondingCurveAbi } from "@/lib/web3/abi";
-import { useState, useId } from "react";
+import { useState, useId, useEffect } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,24 @@ function Create() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [pendingHash, setPendingHash] = useState<string | null>(null);
+  const [pendingMeta, setPendingMeta] = useState<Record<string, string | undefined> | undefined>();
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("orvex-pending-launch");
+      if (!saved) return;
+      const value = JSON.parse(saved);
+      if (/^0x[0-9a-fA-F]{64}$/.test(value.hash)) {
+        setPendingHash(value.hash);
+        setPendingMeta(value.meta);
+        setStep(3);
+      }
+    } catch { sessionStorage.removeItem("orvex-pending-launch"); }
+  }, []);
+  const clearPending = () => {
+    setPendingHash(null);
+    setPendingMeta(undefined);
+    sessionStorage.removeItem("orvex-pending-launch");
+  };
   const [deploy, setDeploy] = useState<{ p: number; label: string } | null>(null);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
   const {
@@ -126,27 +144,32 @@ function Create() {
         }
         logoUrl = up.url ?? undefined;
       }
+      const meta = {
+        description: f.description,
+        twitter: f.twitter || undefined,
+        telegram: f.telegram || undefined,
+        website: f.website || undefined,
+        logo: logoUrl,
+      };
       setDeploy({ p: 35, label: "Confirm the launch in your wallet" });
-      const { hash, curve } = await createOnchain(address, { name: f.name.trim(), symbol });
+      const { hash, curve } = await createOnchain(address, { name: f.name.trim(), symbol }, (hash) => {
+        setPendingHash(hash);
+        setPendingMeta(meta);
+        sessionStorage.setItem("orvex-pending-launch", JSON.stringify({ hash, meta }));
+      });
       setDeploy({ p: 65, label: "Indexing your token" });
       setPendingHash(hash);
       const r = await doIndex({
         data: {
           txHash: hash,
-          meta: {
-            description: f.description,
-            twitter: f.twitter || undefined,
-            telegram: f.telegram || undefined,
-            website: f.website || undefined,
-            logo: logoUrl,
-          },
+          meta,
         },
       });
       if ("error" in r) {
         toast.warning("Launch confirmed; market indexing needs retry", { description: r.error });
         return;
       }
-      setPendingHash(null);
+      clearPending();
       toast.success(`${symbol} is live on LitVM`, {
         action: {
           label: "View tx",
@@ -187,7 +210,7 @@ function Create() {
             totalSupply: Number(formatEther(total)),
             feeBps: Number(protocolFee + creatorFee),
           };
-          const bh = await buyOnchain(address, curve, devBuy, quoteBuy(r, devBuy).tokenAmount);
+          const bh = await buyOnchain(address, curve, f.devBuy, quoteBuy(r, devBuy).tokenAmount);
           await doIndex({ data: { txHash: bh } });
           toast.success(`Dev buy of ${devBuy} zkLTC done`);
         } catch (e) {
@@ -392,7 +415,7 @@ function Create() {
           {pendingHash && !deploy && (
             <div role="status" className="space-y-3 rounded-lg border border-border p-4">
               <p className="text-sm">
-                Launch confirmed. Do not deploy again; retry adding it to the market.
+                Launch transaction submitted. Do not deploy again; check confirmation and retry adding it to the market.
               </p>
               <div className="flex gap-2">
                 <Button
@@ -400,10 +423,10 @@ function Create() {
                   onClick={async () => {
                     setDeploy({ p: 65, label: "Retrying market indexing" });
                     try {
-                      const result = await doIndex({ data: { txHash: pendingHash } });
+                      const result = await doIndex({ data: { txHash: pendingHash, meta: pendingMeta } });
                       if ("error" in result) toast.error(result.error);
                       else {
-                        setPendingHash(null);
+                        clearPending();
                         navigate({ to: "/token/$symbol", params: { symbol: result.symbol } });
                       }
                     } catch (e) {
