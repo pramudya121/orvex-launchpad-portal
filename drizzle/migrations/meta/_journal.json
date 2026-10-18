@@ -1,34 +1,5 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1792328564131,
-      "tag": "0000_bonding_curve_launchpad",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1792329497847,
-      "tag": "0001_onchain_indexing",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1792330187848,
-      "tag": "0002_onchain_curve_fields",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1792330243233,
-      "tag": "0003_curve_fee_bps",
-      "breakpoints": true
-    }
-  ]
+  "entries": []
 }
