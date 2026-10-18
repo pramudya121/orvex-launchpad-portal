@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { CURVE, marketCapBase, progress, spotPrice, type Reserves } from "./curve";
+import { activeHolders } from "./market";
 
 type TokenRow = Database["public"]["Tables"]["tokens"]["Row"];
 type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
@@ -57,7 +58,7 @@ function toView(t: TokenRow, trades: TradeView[]): TokenView {
   const price = spotPrice(r);
   const since = Date.now() - 86_400_000;
   const recent = trades.filter((x) => +new Date(x.createdAt) >= since);
-  const first = recent.length ? recent[recent.length - 1]!.price : price;
+  const first = recent[recent.length - 1]?.price ?? price;
   return {
     id: t.id, address: t.address, curveAddress: t.curve_address, pairAddress: t.pair_address, name: t.name, symbol: t.symbol, description: t.description, logoUrl: t.logo_url,
     creator: t.creator, createdAt: t.created_at, twitter: t.twitter, telegram: t.telegram, website: t.website,
@@ -66,7 +67,7 @@ function toView(t: TokenRow, trades: TradeView[]): TokenView {
     change24h: first ? (price / first - 1) * 100 : 0,
     volume24hUsd: recent.reduce((s, x) => s + x.baseAmount, 0) * CURVE.baseUsd,
     trades24h: recent.length,
-    holders: new Set(trades.map((x) => x.trader)).size,
+    holders: activeHolders(trades),
     reserves: r,
   };
 }
@@ -141,6 +142,7 @@ export const indexTx = createServerFn({ method: "POST" })
 export const getPortfolio = createServerFn({ method: "GET" })
   .inputValidator((d: { address: string }) => z.object({ address: addr }).parse(d))
   .handler(async ({ data }) => {
+    await sync();
     const sb = publicClient();
     const a = data.address.toLowerCase();
     const { data: tokens } = await sb.from("tokens").select("*").eq("onchain", true).limit(500);
@@ -151,7 +153,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
     const c = chainClient();
     const list = tokens ?? [];
     const bals = await Promise.all(list.map((t) =>
-      c.readContract({ address: t.address as `0x${string}`, abi: launchTokenAbi, functionName: "balanceOf", args: [data.address as `0x${string}`] }).catch(() => 0n)));
+      c.readContract({ address: t.address as `0x${string}`, abi: launchTokenAbi, functionName: "balanceOf", args: [data.address as `0x${string}`] })));
     const holdings = list.map((t, i) => {
       const balance = Number(formatEther(bals[i] as bigint));
       const mine = (trades ?? []).filter((x) => x.token_id === t.id);
@@ -160,6 +162,7 @@ export const getPortfolio = createServerFn({ method: "GET" })
       return { token: v, balance, valueUsd: balance * v.priceUsd, costUsd: Math.max(0, cost) * CURVE.baseUsd };
     }).filter((h) => h.balance > 1e-9);
     return {
+      partial: list.length >= 500 || (trades?.length ?? 0) >= 1000,
       holdings,
       created: list.filter((t) => t.creator === a).map((t) => toView(t, [])),
       history: (trades ?? []).slice(0, 20).map((x) => ({ ...toTrade(x), symbol: list.find((h) => h.id === x.token_id)?.symbol ?? "?" })),

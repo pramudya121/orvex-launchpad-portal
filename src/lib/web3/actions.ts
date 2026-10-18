@@ -1,6 +1,6 @@
 // Browser-side contract calls. Each returns the confirmed tx hash; the caller then
 // asks the server to index it (indexTx) so lists, charts and leaderboard update.
-import { maxUint256, parseEther, parseUnits, zeroAddress, type Address, type Hash } from "viem";
+import { parseEventLogs, parseEther, parseUnits, zeroAddress, type Address, type Hash } from "viem";
 import { antiBotAbi, bondingCurveAbi, factoryAbi, launchTokenAbi, referralAbi, routerAbi } from "./abi";
 import { CONTRACTS } from "./chain";
 import { publicClient, walletClient } from "./client";
@@ -20,7 +20,7 @@ async function ensureAllowance(account: Address, token: Address, spender: Addres
   const cur = (await pc.readContract({ address: token, abi: launchTokenAbi, functionName: "allowance", args: [account, spender] })) as bigint;
   if (cur >= amount) return;
   const w = await walletClient(account);
-  await confirm(await w.writeContract({ address: token, abi: launchTokenAbi, functionName: "approve", args: [spender, maxUint256] }));
+  await confirm(await w.writeContract({ address: token, abi: launchTokenAbi, functionName: "approve", args: [spender, amount] }));
 }
 
 /** Anti-bot pre-check so users get a clear message instead of a reverted tx. */
@@ -52,11 +52,13 @@ export async function creationFee() {
 export async function createOnchain(account: Address, p: { name: string; symbol: string }) {
   const fee = await creationFee();
   const pc = publicClient();
-  const { result } = await pc.simulateContract({ account, address: CONTRACTS.factory, abi: factoryAbi, functionName: "createToken", args: [p.name, p.symbol], value: fee });
+  await pc.simulateContract({ account, address: CONTRACTS.factory, abi: factoryAbi, functionName: "createToken", args: [p.name, p.symbol], value: fee });
   const w = await walletClient(account);
   const hash = await confirm(await w.writeContract({ address: CONTRACTS.factory, abi: factoryAbi, functionName: "createToken", args: [p.name, p.symbol], value: fee }));
-  const [token, curve] = result as readonly [Address, Address];
-  return { hash, token, curve };
+  const receipt = await pc.getTransactionReceipt({ hash });
+  const launch = parseEventLogs({ abi: factoryAbi, logs: receipt.logs, eventName: "TokenLaunched" }).find((l) => l.address.toLowerCase() === CONTRACTS.factory.toLowerCase());
+  if (!launch) throw new Error("Launch confirmed but token event could not be found — check the transaction explorer");
+  return { hash, token: launch.args.token, curve: launch.args.curve };
 }
 
 // ---------------- DEX (UniswapV2 router) ----------------
