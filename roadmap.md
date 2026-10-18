@@ -1,5 +1,8 @@
 # ORVEX improvements
 
+- [ ] Use uploaded ORVEX logo in the website header and favicon.
+- [ ] Strengthen critical database-backed chain indexing and validate the changes.
+
 - [x] Check database coverage; add event-level trade indexing and Realtime publication; fix reverting multicall reads.
 - [x] Compact Explore grid/table with matching filters, watchlist and Buy/Sell navigation.
 - [x] Upgrade Home and Trending market presentation.
