@@ -83,9 +83,11 @@ export type Database = {
           creator: string
           curve_address: string | null
           description: string
+          fee_bps: number
           graduated: boolean
           id: string
           logo_url: string | null
+          max_buy: number | null
           name: string
           onchain: boolean
           pair_address: string | null
@@ -107,9 +109,11 @@ export type Database = {
           creator: string
           curve_address?: string | null
           description?: string
+          fee_bps?: number
           graduated?: boolean
           id?: string
           logo_url?: string | null
+          max_buy?: number | null
           name: string
           onchain?: boolean
           pair_address?: string | null
@@ -131,9 +135,11 @@ export type Database = {
           creator?: string
           curve_address?: string | null
           description?: string
+          fee_bps?: number
           graduated?: boolean
           id?: string
           logo_url?: string | null
+          max_buy?: number | null
           name?: string
           onchain?: boolean
           pair_address?: string | null
