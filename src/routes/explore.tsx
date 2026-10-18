@@ -67,14 +67,15 @@ function Explore() {
     sort: search.sort ?? "new",
     stage: search.stage ?? "all",
     view: search.view ?? "grid",
+    win: search.win ?? "24h",
   };
   const navigate = Route.useNavigate();
   const { favorites } = useWatchlist();
   const update = (value: Partial<typeof s>) =>
     navigate({ search: (old) => ({ ...old, ...value }), replace: true });
   const list = useMemo(
-    () => filterMarket(data, s.q, s.sort, s.stage, favorites),
-    [data, s.q, s.sort, s.stage, favorites],
+    () => filterMarket(data, s.q, s.sort, s.stage, favorites, s.win),
+    [data, s.q, s.sort, s.stage, favorites, s.win],
   );
   return (
     <div className="space-y-5">
