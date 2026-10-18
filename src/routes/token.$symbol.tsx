@@ -2,7 +2,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Heart, Share2, Loader2, PartyPopper } from "lucide-react";
+import { Copy, Heart, Share2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,6 @@ import { TokenLogo } from "@/components/orvex/TokenLogo";
 import { Change } from "@/components/orvex/Change";
 import { PriceChart } from "@/components/orvex/PriceChart";
 import { TokenInfoPanel } from "@/components/orvex/TokenInfoPanel";
-import { CurveProgress } from "@/components/orvex/CurveProgress";
 import { useWallet } from "@/components/orvex/wallet";
 import { FavoriteButton } from "@/components/orvex/Watchlist";
 import { MarketError, MarketNotFound } from "@/components/orvex/RouteFeedback";
@@ -284,27 +283,6 @@ function Holder({ label, pct }: { label: string; pct: number }) {
           style={{ width: `${Math.min(100, pct)}%` }}
         />
       </div>
-    </div>
-  );
-}
-
-function CurveCard({ t }: { t: TokenView }) {
-  const left = t.reserves.saleSupply - t.reserves.tokensSold;
-  return (
-    <div className="glass rounded-2xl p-5">
-      <CurveProgress value={t.progress} graduated={t.graduated} />
-      <p className="mt-3 text-xs text-muted-foreground">
-        {t.graduated ? (
-          <span className="flex items-center gap-1.5 text-success">
-            <PartyPopper className="size-4" /> Curve complete — liquidity migrates to the DEX.
-          </span>
-        ) : (
-          <>
-            {fmtNum(left)} tokens left on the curve. Graduation to the DEX happens when all{" "}
-            {fmtNum(t.reserves.saleSupply)} are sold.
-          </>
-        )}
-      </p>
     </div>
   );
 }
