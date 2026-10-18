@@ -115,6 +115,7 @@ function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenVie
   const since = Date.now() - 86_400_000;
   const recent = trades.filter((x) => +new Date(x.createdAt) >= since);
   const first = stats?.first_price_24h ?? recent[recent.length - 1]?.price ?? price;
+  const first7 = stats?.first_price_7d ?? null;
   return {
     id: t.id,
     address: t.address,
