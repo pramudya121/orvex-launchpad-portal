@@ -206,7 +206,6 @@ function Dex() {
       <Tabs value={view} onValueChange={setView} className="min-w-0">
         <TabsList aria-label="DEX navigation" className="mb-6">
           <TabsTrigger value="swap"><ArrowDownUp className="mr-2 size-4" />Swap</TabsTrigger>
-          <TabsTrigger value="liquidity"><Droplets className="mr-2 size-4" />Liquidity</TabsTrigger>
           <TabsTrigger value="pools"><Layers className="mr-2 size-4" />Pools</TabsTrigger>
         </TabsList>
         <TabsContent value="swap">
@@ -322,11 +321,6 @@ function Dex() {
           </Button>
         </div>
 
-        </TabsContent>
-        <TabsContent value="liquidity">
-          <div className="space-y-8"><LiquidityPanel selected={selectedPosition} /><Pools positions onSelect={(a, b) => {
-            setSelectedPosition({a,b});
-          }} /></div>
         </TabsContent>
         <TabsContent value="pools">
         <Pools

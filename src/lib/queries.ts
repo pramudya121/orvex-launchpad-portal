@@ -35,3 +35,10 @@ export const leaderboardQuery = () =>
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
+
+export const liveTradesQuery = () =>
+  queryOptions({
+    queryKey: ["live-trades"],
+    queryFn: () => import("./launchpad.functions").then((m) => m.listLiveTrades()),
+    refetchInterval: 10_000,
+  });

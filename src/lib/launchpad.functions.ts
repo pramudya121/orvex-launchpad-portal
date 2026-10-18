@@ -450,3 +450,20 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(async ()
       .slice(0, 50),
   };
 });
+
+export type LiveTrade = TradeView & { symbol: string; logoUrl: string | null; priceUsd: number; valueUsd: number };
+/** Latest indexed curve trades across all tokens for the global live ticker. */
+export const listLiveTrades = createServerFn({ method: "GET" }).handler(async (): Promise<LiveTrade[]> => {
+  const sb = publicClient();
+  const { data, error } = await sb
+    .from("token_trades")
+    .select("*, tokens!inner(symbol, logo_url)")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) throw new Error("Could not load live trades");
+  return (data ?? []).map((r) => {
+    const tk = r.tokens as unknown as { symbol: string; logo_url: string | null };
+    const t = toTrade(r);
+    return { ...t, symbol: tk.symbol, logoUrl: tk.logo_url, priceUsd: t.price * CURVE.baseUsd, valueUsd: t.baseAmount * CURVE.baseUsd };
+  });
+});

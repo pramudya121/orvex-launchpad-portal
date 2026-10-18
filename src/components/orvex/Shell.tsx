@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LiveTicker } from "@/components/orvex/LiveTicker";
 import {
   CommandDialog,
   CommandInput,
@@ -122,6 +123,7 @@ export function Shell({ children }: { children: ReactNode }) {
           )}
         </div>
       </header>
+      <LiveTicker />
 
       <main className="mx-auto max-w-[1440px] px-4 py-8 animate-in fade-in duration-300">
         {children}
