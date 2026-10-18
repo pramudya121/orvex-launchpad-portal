@@ -197,6 +197,18 @@ export type Database = {
           volume_all: number
         }[]
       }
+      token_market_short_stats: {
+        Args: { token_ids: string[] }
+        Returns: {
+          first_price_1h: number
+          first_price_6h: number
+          token_id: string
+          trades_1h: number
+          trades_6h: number
+          volume_1h: number
+          volume_6h: number
+        }[]
+      }
       token_market_stats: {
         Args: { token_ids: string[] }
         Returns: {
