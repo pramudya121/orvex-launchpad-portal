@@ -1,5 +1,10 @@
 # ORVEX improvements
 
+- [ ] Enforce logo upload size at selection, server and storage.
+- [ ] Add incremental token and pool loading with bounded chain requests.
+- [ ] Implement DEX add/remove liquidity, confirmation and transaction status; show token-picker balances.
+- [ ] Verify new limits, pagination and liquidity safety with tests and live UI checks.
+
 - [x] Remove Explore Window label and emphasize market cap on token cards.
 - [x] Separate DEX Swap/Liquidity/Pools navigation and add uploaded ORVX logo.
 - [x] Move Create logo upload to top and show contract supply allocations.

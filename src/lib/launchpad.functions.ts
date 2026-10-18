@@ -5,6 +5,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { CURVE, marketCapBase, progress, spotPrice, type Reserves } from "./curve";
 import { activeHolders } from "./market";
 import { boundedMap } from "./bounded-map";
+import { decodeLogo, LOGO_MAX_BYTES } from "./logo-upload";
+import { TOKEN_PAGE_SIZE } from "./pagination";
 
 type TokenRow = Database["public"]["Tables"]["tokens"]["Row"];
 type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
