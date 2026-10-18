@@ -97,7 +97,9 @@ function Admin() {
       </div>
     );
 
+  // On-chain shares are basis points (10000 = 100%).
   const totalShare = s.treasuryShare + s.teamShare + s.marketingShare;
+  const pct = (bps: number) => bps / 100;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -147,9 +149,9 @@ function Admin() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ["Contract balance", `${Number(formatEther(s.balance)).toFixed(4)} zkLTC`],
-          ["Treasury share", `${s.treasuryShare}%`],
-          ["Team share", `${s.teamShare}%`],
-          ["Marketing share", `${s.marketingShare}%`],
+          ["Treasury share", `${pct(s.treasuryShare)}%`],
+          ["Team share", `${pct(s.teamShare)}%`],
+          ["Marketing share", `${pct(s.marketingShare)}%`],
         ].map(([k, v]) => (
           <div key={k} className="glass rounded-xl p-4">
             <div className="text-xs text-muted-foreground">{k}</div>
@@ -176,11 +178,16 @@ function Admin() {
         <Section icon={<Percent className="size-4" />} title="Fee split (%)">
           <ShareForm
             disabled={!isOwner || !!busy}
-            initial={{ treasury: s.treasuryShare, team: s.teamShare, marketing: s.marketingShare }}
-            total={totalShare}
+            initial={{ treasury: pct(s.treasuryShare), team: pct(s.teamShare), marketing: pct(s.marketingShare) }}
+            total={pct(totalShare)}
             onSave={(sh) =>
               run("shares", () =>
-                feeManagerSetShares(address as Address, BigInt(sh.treasury), BigInt(sh.team), BigInt(sh.marketing)),
+                feeManagerSetShares(
+                  address as Address,
+                  BigInt(sh.treasury * 100),
+                  BigInt(sh.team * 100),
+                  BigInt(sh.marketing * 100),
+                ),
               )
             }
           />
