@@ -184,7 +184,7 @@ function Create() {
       });
 
       if (devBuy > 0) {
-        setDeploy({ p: 80, label: "Confirm your dev buy" });
+        setDeploy({ p: 80, label: "Confirm your initial buy (transaction 2 of 2)" });
         try {
           const pc = publicClient();
           const [reserves, sale, total, protocolFee, creatorFee] = await Promise.all([
@@ -218,9 +218,9 @@ function Create() {
           };
           const bh = await buyOnchain(address, curve, f.devBuy, quoteBuy(r, devBuy).tokenAmount);
           await doIndex({ data: { txHash: bh } });
-          toast.success(`Dev buy of ${devBuy} zkLTC done`);
+          toast.success(`Initial buy of ${devBuy} zkLTC done`);
         } catch (e) {
-          toast.error(`Dev buy failed: ${walletError(e)}`);
+          toast.error(`Initial buy failed: ${walletError(e)}`);
         }
       }
       setDeploy({ p: 100, label: "Done" });
