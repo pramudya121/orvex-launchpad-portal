@@ -10,9 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { fmtUsd, fmtNum, fmtAge, short } from "@/lib/tokens";
 import { tokenQuery, portfolioQuery } from "@/lib/queries";
-import { trade, indexTx, type TokenView } from "@/lib/launchpad.functions";
+import { indexTx, type TokenView } from "@/lib/launchpad.functions";
 import type { Address } from "viem";
-import { buyOnchain, sellOnchain, walletError } from "@/lib/web3/actions";
+import { antiBotCheck, buyOnchain, sellOnchain, walletError } from "@/lib/web3/actions";
 import { explorerTx, explorerAddress } from "@/lib/web3/chain";
 import { CURVE, quoteBuy, quoteSell } from "@/lib/curve";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,9 +74,7 @@ function TokenPage() {
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             ${t.symbol}
             <button onClick={() => { navigator.clipboard.writeText(t.address); toast("Contract copied"); }} className="flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 font-mono text-xs hover:text-foreground">{short(t.address)} <Copy className="size-3" /></button>
-            {t.onchain
-              ? <a href={explorerAddress(t.address)} target="_blank" rel="noreferrer" className="rounded-md bg-success/15 px-2 py-0.5 text-xs text-success hover:underline">On-chain · Explorer</a>
-              : <span className="rounded-md bg-surface px-2 py-0.5 text-xs">Demo</span>}
+            <a href={explorerAddress(t.address)} target="_blank" rel="noreferrer" className="rounded-md bg-success/15 px-2 py-0.5 text-xs text-success hover:underline">Explorer</a>
             {t.website && <a href={t.website} target="_blank" rel="noreferrer" className="hover:text-foreground">Website</a>}
           </div>
         </div>
@@ -113,13 +111,15 @@ function TokenPage() {
               )}
             </TabsContent>
             <TabsContent value="holders" className="glass space-y-3 rounded-2xl p-4">
-              <Holder label="Bonding curve" pct={((CURVE.totalSupply - t.reserves.tokensSold) / CURVE.totalSupply) * 100} />
-              {holders.map(([a, v]) => <Holder key={a} label={short(a) + (a === t.creator ? " (dev)" : "")} pct={(v / CURVE.totalSupply) * 100} />)}
+              <Holder label="Bonding curve" pct={((t.reserves.totalSupply - t.reserves.tokensSold) / t.reserves.totalSupply) * 100} />
+              {holders.map(([a, v]) => <Holder key={a} label={short(a) + (a === t.creator ? " (dev)" : "")} pct={(v / t.reserves.totalSupply) * 100} />)}
             </TabsContent>
             <TabsContent value="info" className="glass space-y-3 rounded-2xl p-4 text-sm">
               <p>{t.description || "No description."}</p>
               <div className="text-muted-foreground">Creator: <span className="font-mono">{short(t.creator)}</span></div>
-              <div className="text-muted-foreground">Supply 1,000,000,000 · {CURVE.curveSupply / 1e6}M on curve · 200M reserved for DEX liquidity · {CURVE.feeRate * 100}% trade fee</div>
+              <div className="text-muted-foreground">Supply {fmtNum(t.reserves.totalSupply)} · {fmtNum(t.reserves.saleSupply)} on curve · {fmtNum(t.reserves.totalSupply - t.reserves.saleSupply)} for DEX liquidity · {t.reserves.feeBps / 100}% trade fee</div>
+              {t.curveAddress && <div className="text-muted-foreground">Bonding curve: <a className="font-mono hover:text-foreground" href={explorerAddress(t.curveAddress)} target="_blank" rel="noreferrer">{short(t.curveAddress)}</a></div>}
+              {t.pairAddress && <div className="text-muted-foreground">DEX pair: <a className="font-mono hover:text-foreground" href={explorerAddress(t.pairAddress)} target="_blank" rel="noreferrer">{short(t.pairAddress)}</a></div>}
             </TabsContent>
           </Tabs>
         </div>
@@ -142,7 +142,7 @@ function Holder({ label, pct }: { label: string; pct: number }) {
 }
 
 function CurveCard({ t }: { t: TokenView }) {
-  const left = CURVE.curveSupply - t.reserves.tokensSold;
+  const left = t.reserves.saleSupply - t.reserves.tokensSold;
   return (
     <div className="glass rounded-2xl p-5">
       <CurveProgress value={t.progress} graduated={t.graduated} />
@@ -150,7 +150,7 @@ function CurveCard({ t }: { t: TokenView }) {
         {t.graduated ? (
           <span className="flex items-center gap-1.5 text-success"><PartyPopper className="size-4" /> Curve complete — liquidity migrates to the DEX.</span>
         ) : (
-          <>{fmtNum(left)} tokens left on the curve. Graduation happens automatically when all {CURVE.curveSupply / 1e6}M are sold.</>
+          <>{fmtNum(left)} tokens left on the curve. Graduation to the DEX happens when all {fmtNum(t.reserves.saleSupply)} are sold.</>
         )}
       </p>
     </div>
@@ -158,9 +158,8 @@ function CurveCard({ t }: { t: TokenView }) {
 }
 
 function SwapPanel({ t }: { t: TokenView }) {
-  const { address, open, onchain } = useWallet();
+  const { address, open } = useWallet();
   const qc = useQueryClient();
-  const doTrade = useServerFn(trade);
   const doIndex = useServerFn(indexTx);
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amt, setAmt] = useState("");
@@ -174,40 +173,34 @@ function SwapPanel({ t }: { t: TokenView }) {
     if (!(n > 0)) return null;
     try { return side === "buy" ? quoteBuy(t.reserves, n) : quoteSell(t.reserves, n); } catch (e) { return { error: (e as Error).message }; }
   }, [n, side, t.reserves]);
-  const err = quote && "error" in quote ? quote.error : side === "sell" && n > balance + 1e-6 ? "Insufficient balance" : null;
+  const err = quote && "error" in quote ? quote.error
+    : side === "sell" && n > balance + 1e-9 ? "Insufficient balance"
+    : side === "buy" && t.maxBuy && n > t.maxBuy ? `Max buy is ${t.maxBuy} zkLTC per transaction`
+    : !t.curveAddress ? "Curve not indexed yet" : null;
   const q = quote && !("error" in quote) ? quote : null;
 
-  const refresh = () => {
-    setAmt("");
-    qc.invalidateQueries({ queryKey: ["token"] });
-    qc.invalidateQueries({ queryKey: ["tokens"] });
-    qc.invalidateQueries({ queryKey: ["portfolio"] });
-  };
-
   const submit = async () => {
-    if (!address || !q) return;
+    if (!address || !q || !t.curveAddress) return;
     setBusy(true);
     try {
-      if (onchain && t.onchain) {
-        const hash = side === "buy"
-          ? await buyOnchain(address as Address, t.address as Address, n, q.tokenAmount)
-          : await sellOnchain(address as Address, t.address as Address, n, q.baseAmount);
-        await doIndex({ data: { txHash: hash } });
-        toast.success(side === "buy" ? `Bought ${fmtNum(q.tokenAmount)} ${t.symbol}` : `Sold for ${q.baseAmount.toFixed(4)} zkLTC`, {
-          action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") },
-        });
-        refresh();
+      if (side === "buy" && !(await antiBotCheck(address, n))) {
+        toast.error("Blocked by anti-bot protection", { description: "Cooldown, max transaction size or blacklist — wait a moment and try a smaller amount." });
         return;
       }
-      const r = await doTrade({ data: { tokenId: t.id, side, amount: n, trader: address } });
-      if ("error" in r) toast.error(r.error);
-      else {
-        toast.success(side === "buy" ? `Bought ${fmtNum(r.tokenAmount)} ${t.symbol}` : `Sold for ${r.baseAmount.toFixed(4)} zkLTC`);
-        if (r.graduated) toast.success(`${t.symbol} graduated! 🎓`);
-        refresh();
-      }
+      const hash = side === "buy"
+        ? await buyOnchain(address, t.curveAddress as Address, n, q.tokenAmount)
+        : await sellOnchain(address, t.address as Address, t.curveAddress as Address, n, q.baseAmount);
+      const r = await doIndex({ data: { txHash: hash } });
+      toast.success(side === "buy" ? `Bought ~${fmtNum(q.tokenAmount)} ${t.symbol}` : `Sold for ~${q.baseAmount.toFixed(4)} zkLTC`, {
+        description: "error" in r ? r.error : undefined,
+        action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") },
+      });
+      setAmt("");
+      qc.invalidateQueries({ queryKey: ["token"] });
+      qc.invalidateQueries({ queryKey: ["tokens"] });
+      qc.invalidateQueries({ queryKey: ["portfolio"] });
     } catch (e) {
-      toast.error(onchain ? walletError(e) : "Trade failed, please try again");
+      toast.error(walletError(e));
     } finally {
       setBusy(false);
     }
@@ -236,8 +229,9 @@ function SwapPanel({ t }: { t: TokenView }) {
         <div className="font-mono text-lg">{fmtNum(out, 4)} {outUnit}</div>
         {q && (
           <div className="space-y-0.5 pt-1 font-mono text-[11px] text-muted-foreground">
-            <div className="flex justify-between"><span>Fee ({CURVE.feeRate * 100}%)</span><span>{q.fee.toFixed(5)} zkLTC</span></div>
+            <div className="flex justify-between"><span>Fee ({t.reserves.feeBps / 100}%)</span><span>{q.fee.toFixed(5)} zkLTC</span></div>
             <div className="flex justify-between"><span>Price impact</span><span className={Math.abs(q.priceImpact) > 5 ? "text-danger" : ""}>{q.priceImpact.toFixed(2)}%</span></div>
+            <div className="flex justify-between"><span>Slippage tolerance</span><span>{CURVE.slippage * 100}%</span></div>
             {q.capped && <div className="text-primary-glow">Capped at remaining curve supply — this buy graduates the token.</div>}
           </div>
         )}
