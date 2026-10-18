@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useState } from "react";
-import { BadgeCheck, Copy, Globe, Heart, Send, Share2, Twitter } from "lucide-react";
+import { BadgeCheck, Copy, Globe, Heart, Send, Share2, AtSign as Twitter } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
