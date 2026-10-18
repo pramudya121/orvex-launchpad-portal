@@ -14,7 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      token_trades: {
+        Row: {
+          base_amount: number
+          created_at: string
+          id: string
+          price: number
+          side: string
+          token_amount: number
+          token_id: string
+          trader: string
+          tx_hash: string | null
+        }
+        Insert: {
+          base_amount: number
+          created_at?: string
+          id?: string
+          price: number
+          side: string
+          token_amount: number
+          token_id: string
+          trader: string
+          tx_hash?: string | null
+        }
+        Update: {
+          base_amount?: number
+          created_at?: string
+          id?: string
+          price?: number
+          side?: string
+          token_amount?: number
+          token_id?: string
+          trader?: string
+          tx_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_trades_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tokens: {
+        Row: {
+          address: string
+          created_at: string
+          creator: string
+          description: string
+          graduated: boolean
+          id: string
+          logo_url: string | null
+          name: string
+          real_base: number
+          symbol: string
+          telegram: string | null
+          tokens_sold: number
+          twitter: string | null
+          virtual_base: number
+          virtual_token: number
+          website: string | null
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          creator: string
+          description?: string
+          graduated?: boolean
+          id?: string
+          logo_url?: string | null
+          name: string
+          real_base?: number
+          symbol: string
+          telegram?: string | null
+          tokens_sold?: number
+          twitter?: string | null
+          virtual_base?: number
+          virtual_token?: number
+          website?: string | null
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          creator?: string
+          description?: string
+          graduated?: boolean
+          id?: string
+          logo_url?: string | null
+          name?: string
+          real_base?: number
+          symbol?: string
+          telegram?: string | null
+          tokens_sold?: number
+          twitter?: string | null
+          virtual_base?: number
+          virtual_token?: number
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
