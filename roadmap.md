@@ -12,6 +12,7 @@
 - [x] Upgrade Home and Trending market presentation.
 - [x] Upgrade Create, Leaderboard, DEX and Portfolio usability and error states.
 - [x] Verify seven public pages, Create validation, URL filters, real DEX quotes, mobile layout and eleven tests.
+- [x] Keep the raised/24h-volume row out of the token card and shorten the card (4:3 artwork, tighter rows, 165px grid columns); lock it with a render test.
 - [ ] Verify funded wallet launch, buy, sell and portfolio readback — blocked by no connected funded testnet wallet or existing factory tokens.
 - [ ] Verify populated grid/table and event delivery end-to-end — blocked by the connected factory and database having zero token launches.
 - [x] Obtain available database security results — remaining informational notices concern intentionally public token/trade data.

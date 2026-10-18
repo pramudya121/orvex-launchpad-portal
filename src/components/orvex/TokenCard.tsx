@@ -9,8 +9,8 @@ import { FavoriteButton } from "./Watchlist";
 export function TokenCard({ t }: { t: TokenView }) {
   const [failed, setFailed] = useState(false);
   return (
-    <article className="group min-w-0 overflow-hidden rounded-lg border border-border bg-card p-2 transition-colors hover:border-primary/50">
-      <div className="relative aspect-square overflow-hidden rounded-md bg-surface">
+    <article className="group min-w-0 overflow-hidden rounded-lg border border-border bg-card p-1.5 transition-colors hover:border-primary/50">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-surface">
         <Link
           to="/token/$symbol"
           params={{ symbol: t.symbol }}
@@ -27,37 +27,38 @@ export function TokenCard({ t }: { t: TokenView }) {
             />
           ) : (
             <div className="token-art grid h-full w-full place-items-center">
-              <span className="font-mono text-4xl font-bold text-primary">
+              <span className="font-mono text-3xl font-bold text-primary">
                 {t.symbol.slice(0, 2)}
               </span>
             </div>
           )}
         </Link>
-        <span className="absolute left-2 top-2 rounded-sm bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
+        <span className="absolute left-1.5 top-1.5 rounded-sm bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">
           zkLTC
         </span>
-        <div className="absolute right-2 top-2">
+        <div className="absolute right-1.5 top-1.5">
           <FavoriteButton id={t.id} />
         </div>
       </div>
-      <Link to="/token/$symbol" params={{ symbol: t.symbol }} className="block px-0.5 pb-1 pt-2">
-        <div className="truncate text-xs font-bold">{t.name}</div>
-        <div className="mt-0.5 flex justify-between text-[10px] text-muted-foreground">
-          <span className="truncate">${t.symbol}</span>
-          <span className="shrink-0">{fmtAge(t.createdAt)}</span>
+      <Link
+        to="/token/$symbol"
+        params={{ symbol: t.symbol }}
+        className="block px-0.5 pb-0.5 pt-1.5"
+      >
+        <div className="flex items-baseline justify-between gap-1">
+          <div className="truncate text-xs font-bold">{t.name}</div>
+          <span className="shrink-0 text-[9px] text-muted-foreground">{fmtAge(t.createdAt)}</span>
         </div>
-        <div className="mt-2 flex items-center justify-between gap-1">
-          <div className="truncate text-sm font-bold">
-            {fmtUsd(t.marketCapUsd)}{" "}
-            <span className="text-[9px] font-normal text-muted-foreground">MC</span>
-          </div>
+        <div className="mt-1 flex items-center justify-between gap-1">
+          <div className="truncate font-mono text-xs font-bold">{fmtUsd(t.priceUsd)}</div>
           <Change v={t.change24h} />
         </div>
-        <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-          {fmtUsd(t.priceUsd)}
+        <div className="mt-0.5 flex items-center justify-between gap-1 font-mono text-[9px] text-muted-foreground">
+          <span>{fmtUsd(t.marketCapUsd)} MC</span>
+          <span className="truncate">${t.symbol}</span>
         </div>
-        <CurveProgress value={t.progress} graduated={t.graduated} className="mt-2" />
-        <div className="mt-2 flex justify-between gap-1 font-mono text-[9px] text-muted-foreground">
+        <CurveProgress value={t.progress} graduated={t.graduated} className="mt-1.5" />
+        <div className="mt-1.5 flex justify-between gap-1 font-mono text-[9px] text-muted-foreground">
           <span>{short(t.address)}</span>
           <span className="truncate">by {short(t.creator)}</span>
         </div>
@@ -65,6 +66,7 @@ export function TokenCard({ t }: { t: TokenView }) {
     </article>
   );
 }
+
 export function TokenCardSkeleton() {
-  return <div className="aspect-[1/1.85] animate-pulse rounded-lg border border-border bg-card" />;
+  return <div className="aspect-[1/1.45] animate-pulse rounded-lg border border-border bg-card" />;
 }
