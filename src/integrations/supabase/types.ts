@@ -35,6 +35,8 @@ export type Database = {
       token_trades: {
         Row: {
           base_amount: number
+          block_hash: string | null
+          block_number: number | null
           created_at: string
           id: string
           log_index: number
@@ -47,6 +49,8 @@ export type Database = {
         }
         Insert: {
           base_amount: number
+          block_hash?: string | null
+          block_number?: number | null
           created_at?: string
           id?: string
           log_index?: number
@@ -59,6 +63,8 @@ export type Database = {
         }
         Update: {
           base_amount?: number
+          block_hash?: string | null
+          block_number?: number | null
           created_at?: string
           id?: string
           log_index?: number
@@ -89,6 +95,7 @@ export type Database = {
           fee_bps: number
           graduated: boolean
           id: string
+          launch_block: number | null
           logo_url: string | null
           max_buy: number | null
           name: string
@@ -115,6 +122,7 @@ export type Database = {
           fee_bps?: number
           graduated?: boolean
           id?: string
+          launch_block?: number | null
           logo_url?: string | null
           max_buy?: number | null
           name: string
@@ -141,6 +149,7 @@ export type Database = {
           fee_bps?: number
           graduated?: boolean
           id?: string
+          launch_block?: number | null
           logo_url?: string | null
           max_buy?: number | null
           name?: string
