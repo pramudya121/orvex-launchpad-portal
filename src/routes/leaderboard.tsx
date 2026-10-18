@@ -2,7 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { MarketStatus } from "@/components/orvex/MarketStatus";
 import { MarketError, MarketNotFound } from "@/components/orvex/RouteFeedback";
-import { Trophy } from "lucide-react";
+import { Trophy, Users, Coins, Rocket, Activity, Search, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { MarketHeading, MarketStats } from "@/components/orvex/MarketHeading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { leaderboardQuery } from "@/lib/queries";
 import { fmtNum, fmtUsd, short } from "@/lib/tokens";
@@ -64,22 +67,30 @@ const Addr = ({ a }: { a: string }) => (
 
 function Leaderboard() {
   const { data } = useSuspenseQuery(leaderboardQuery());
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3 border-b border-border pb-5">
-        <div className="grid size-11 place-items-center rounded-xl bg-primary/20">
-          <Trophy className="size-5 text-primary-glow" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
-          <p className="text-sm text-muted-foreground">
-            All-time rankings · Indexed curve trades · Testnet
-          </p>
-        </div>
-        <div className="ml-auto">
-          <MarketStatus />
-        </div>
+      <MarketHeading label="The arena" title="Leaderboard" description="All-time · Indexed curve activity · LiteForge testnet" icon={<Trophy className="size-3.5" />} />
+      <MarketStats items={[
+        { label: "Ranked traders", value: data.traders.length, detail: "Top 50 by trading volume", icon: <Users className="size-4" /> },
+        { label: "Ranked volume", value: fmtUsd(data.traders.reduce((sum, t) => sum + t.volumeUsd, 0)), detail: "Indexed trades · Ranked wallets", icon: <Activity className="size-4" /> },
+        { label: "Ranked tokens", value: data.tokens.length, detail: "Top 50 by market cap", icon: <Coins className="size-4" /> },
+        { label: "Ranked creators", value: data.creators.length, detail: "Top 50 by launch market cap", icon: <Rocket className="size-4" /> },
+      ]} />
+      <div className="grid gap-4 md:grid-cols-3">
+        {[
+          { title: "Leading trader", value: data.traders[0] ? short(data.traders[0].address) : "—", metric: data.traders[0] ? fmtUsd(data.traders[0].volumeUsd) + " volume" : "Awaiting activity", icon: <Trophy className="size-5" />, address: data.traders[0]?.address },
+          { title: "Leading token", value: data.tokens[0]?.name ?? "—", metric: data.tokens[0] ? fmtUsd(data.tokens[0].marketCapUsd) + " market cap" : "Awaiting launch", icon: <Coins className="size-5" />, address: data.tokens[0]?.address },
+          { title: "Leading creator", value: data.creators[0] ? short(data.creators[0].address) : "—", metric: data.creators[0] ? data.creators[0].launches + " launches" : "Awaiting launch", icon: <Rocket className="size-5" />, address: data.creators[0]?.address },
+        ].map((item, i) => <article key={item.title} className="relative overflow-hidden rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center justify-between text-primary">{item.icon}<span className="font-mono text-xs text-muted-foreground">0{i + 1}</span></div>
+          <p className="mt-5 text-[10px] uppercase text-muted-foreground">{item.title}</p>
+          <div className="mt-2 truncate text-lg font-bold">{item.address ? <a href={explorerAddress(item.address)} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-primary">{item.value}<ExternalLink className="size-3 shrink-0" /></a> : item.value}</div>
+          <p className="mt-2 font-mono text-xs text-success">{item.metric}</p>
+        </article>)}
       </div>
+      <div className="relative max-w-sm"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input aria-label="Search rankings" placeholder="Search wallet or token" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" /></div>
       <Tabs defaultValue="traders">
         <TabsList className="max-w-full overflow-x-auto">
           <TabsTrigger value="traders">Top traders</TabsTrigger>
@@ -87,7 +98,7 @@ function Leaderboard() {
           <TabsTrigger value="creators">Top creators</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="traders" className="glass overflow-x-auto rounded-2xl">
+        <TabsContent value="traders" className="mt-4 overflow-x-auto border-y border-border">
           {data.traders.length === 0 ? (
             <Empty text="No trades yet — be the first trader on the board." />
           ) : (
@@ -102,8 +113,8 @@ function Leaderboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data.traders.map((t, i) => (
-                  <tr key={t.address}>
+                {data.traders.map((t, i) => !t.address.toLowerCase().includes(q) ? null : (
+                  <tr key={t.address} className="transition-colors hover:bg-surface/50">
                     <td className="px-4 py-3">
                       <Rank i={i} />
                     </td>
@@ -137,7 +148,7 @@ function Leaderboard() {
           )}
         </TabsContent>
 
-        <TabsContent value="tokens" className="glass overflow-x-auto rounded-2xl">
+        <TabsContent value="tokens" className="mt-4 overflow-x-auto border-y border-border">
           {data.tokens.length === 0 ? (
             <Empty text="No tokens launched yet." />
           ) : (
@@ -152,8 +163,8 @@ function Leaderboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data.tokens.map((t, i) => (
-                  <tr key={t.id}>
+                {data.tokens.map((t, i) => !`${t.name} ${t.symbol} ${t.address}`.toLowerCase().includes(q) ? null : (
+                  <tr key={t.id} className="transition-colors hover:bg-surface/50">
                     <td className="px-4 py-3">
                       <Rank i={i} />
                     </td>
@@ -182,7 +193,7 @@ function Leaderboard() {
           )}
         </TabsContent>
 
-        <TabsContent value="creators" className="glass overflow-x-auto rounded-2xl">
+        <TabsContent value="creators" className="mt-4 overflow-x-auto border-y border-border">
           {data.creators.length === 0 ? (
             <Empty text="No creators yet — launch the first token." />
           ) : (
@@ -197,8 +208,8 @@ function Leaderboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data.creators.map((c, i) => (
-                  <tr key={c.address}>
+                {data.creators.map((c, i) => !c.address.toLowerCase().includes(q) ? null : (
+                  <tr key={c.address} className="transition-colors hover:bg-surface/50">
                     <td className="px-4 py-3">
                       <Rank i={i} />
                     </td>
@@ -215,6 +226,7 @@ function Leaderboard() {
           )}
         </TabsContent>
       </Tabs>
+      <p className="text-[10px] text-muted-foreground">Rankings cover up to 5,000 recent indexed trades and 500 launches. Net flow is sell proceeds minus buy spend, not accounting PNL.</p>
     </div>
   );
 }
