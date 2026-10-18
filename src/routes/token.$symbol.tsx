@@ -36,6 +36,8 @@ export const Route = createFileRoute("/token/$symbol")({
   },
   head: ({ loaderData }) => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: loaderData ? `${loaderData.name} ($${loaderData.symbol}) — ORVEX` : "Token — ORVEX" },
       { name: "description", content: loaderData ? `Live bonding-curve chart and trading for ${loaderData.name} on LitVM.` : "Token on ORVEX" },
       { property: "og:title", content: loaderData ? `${loaderData.name} on ORVEX` : "Token — ORVEX" },

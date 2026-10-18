@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/create")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Create a Token — ORVEX" },
       { name: "description", content: "Launch your own ERC-20 memecoin on LitVM in four simple steps." },
       { property: "og:title", content: "Create a Token — ORVEX" },

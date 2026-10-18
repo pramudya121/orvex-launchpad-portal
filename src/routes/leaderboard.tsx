@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { MarketStatus } from "@/components/orvex/MarketStatus";
+import { MarketError, MarketNotFound } from "@/components/orvex/RouteFeedback";
 import { Trophy } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { leaderboardQuery } from "@/lib/queries";
@@ -21,6 +23,7 @@ export const Route = createFileRoute("/leaderboard")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  errorComponent: MarketError, notFoundComponent: MarketNotFound,
   component: Leaderboard,
 });
 
@@ -34,16 +37,16 @@ function Leaderboard() {
   const { data } = useSuspenseQuery(leaderboardQuery());
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border pb-5">
         <div className="grid size-11 place-items-center rounded-xl bg-primary/20"><Trophy className="size-5 text-primary-glow" /></div>
-        <div><h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1><p className="text-sm text-muted-foreground">Ranked from on-chain trades on LitVM LiteForge.</p></div>
+        <div><h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1><p className="text-sm text-muted-foreground">All-time rankings · Indexed curve trades · Testnet</p></div><div className="ml-auto"><MarketStatus/></div>
       </div>
       <Tabs defaultValue="traders">
-        <TabsList><TabsTrigger value="traders">Top traders</TabsTrigger><TabsTrigger value="tokens">Top tokens</TabsTrigger><TabsTrigger value="creators">Top creators</TabsTrigger></TabsList>
+        <TabsList className="max-w-full overflow-x-auto"><TabsTrigger value="traders">Top traders</TabsTrigger><TabsTrigger value="tokens">Top tokens</TabsTrigger><TabsTrigger value="creators">Top creators</TabsTrigger></TabsList>
 
         <TabsContent value="traders" className="glass overflow-x-auto rounded-2xl">
           {data.traders.length === 0 ? <Empty text="No trades yet — be the first trader on the board." /> : (
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[620px] text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr>{["#", "Trader", "Volume", "Trades", "Buys / Sells", "Net flow"].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-border">
                 {data.traders.map((t, i) => (
@@ -63,7 +66,7 @@ function Leaderboard() {
 
         <TabsContent value="tokens" className="glass overflow-x-auto rounded-2xl">
           {data.tokens.length === 0 ? <Empty text="No tokens launched yet." /> : (
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[620px] text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr>{["#", "Token", "Market cap", "Price", "Curve"].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-border">
                 {data.tokens.map((t, i) => (
@@ -82,7 +85,7 @@ function Leaderboard() {
 
         <TabsContent value="creators" className="glass overflow-x-auto rounded-2xl">
           {data.creators.length === 0 ? <Empty text="No creators yet — launch the first token." /> : (
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[620px] text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr>{["#", "Creator", "Launches", "Graduated", "Total market cap"].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-border">
                 {data.creators.map((c, i) => (

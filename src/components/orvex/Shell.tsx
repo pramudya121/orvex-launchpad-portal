@@ -4,9 +4,10 @@ import { Compass, Flame, Home, Plus, Search, Wallet, PieChart, Trophy, ArrowLeft
 import { Button } from "@/components/ui/button";
 import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { short } from "@/lib/tokens";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { tokensQuery } from "@/lib/queries";
 import { useWallet } from "./wallet";
+import { supabase } from "@/integrations/supabase/client";
 import { TokenLogo } from "./TokenLogo";
 
 const NAV = [
@@ -23,6 +24,13 @@ export function Shell({ children }: { children: ReactNode }) {
   const { address, open, disconnect } = useWallet();
   const [search, setSearch] = useState(false);
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => { if (timer) return; timer = setTimeout(() => { timer = undefined; for (const key of ["tokens", "token", "portfolio", "leaderboard"]) qc.invalidateQueries({queryKey:[key]}); }, 300); };
+    const channel = supabase.channel("orvex-market-live").on("postgres_changes", {event:"*",schema:"public",table:"tokens"},refresh).on("postgres_changes", {event:"*",schema:"public",table:"token_trades"},refresh).subscribe();
+    return () => { if (timer) clearTimeout(timer); supabase.removeChannel(channel); };
+  }, [qc]);
   const { data: tokens = [] } = useQuery({ ...tokensQuery(), enabled: search });
 
   useEffect(() => {
@@ -34,24 +42,24 @@ export function Shell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen pb-20 md:pb-0">
+    <div className="min-h-screen pb-20 lg:pb-0">
       <header className="sticky top-0 z-40 border-b border-border bg-background/75 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-3 px-4">
           <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">
             <span className="grid size-8 place-items-center rounded-lg bg-gradient-primary shadow-glow">O</span>
             ORVEX
           </Link>
-          <nav className="ml-4 hidden items-center gap-1 md:flex">
+          <nav className="ml-4 hidden items-center gap-1 lg:flex">
             {NAV.slice(1).map((n) => (
-              <Link key={n.to} to={n.to} className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:text-foreground" activeProps={{ className: "text-foreground bg-surface" }}>
+              <Link key={n.to} to={n.to} className="rounded-lg px-2.5 py-2 text-xs text-muted-foreground transition hover:text-foreground" activeProps={{ className: "text-foreground bg-surface" }}>
                 {n.label}
               </Link>
             ))}
           </nav>
-          <button onClick={() => setSearch(true)} className="ml-auto flex h-9 items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 text-sm text-muted-foreground transition hover:text-foreground md:w-64">
-            <Search className="size-4" /> <span className="hidden md:inline">Search tokens</span>
+          <Button variant="outline" aria-label="Search tokens" onClick={() => setSearch(true)} className="ml-auto flex h-9 items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 text-sm text-muted-foreground transition hover:text-foreground lg:w-48">
+            <Search className="size-4" /> <span className="hidden lg:inline">Search tokens</span>
             <kbd className="ml-auto hidden rounded bg-muted px-1.5 font-mono text-[10px] md:inline">Ctrl K</kbd>
-          </button>
+          </Button>
           {address ? (
             <Button variant="secondary" size="sm" onClick={disconnect} className="font-mono">{short(address)}</Button>
           ) : (
@@ -60,13 +68,13 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 animate-in fade-in duration-300">{children}</main>
+      <main className="mx-auto max-w-[1440px] px-4 py-8 animate-in fade-in duration-300">{children}</main>
 
-      <footer className="mx-auto hidden max-w-7xl px-4 py-10 text-xs text-muted-foreground md:block">© 2026 ORVEX · Memecoin launchpad on LitVM</footer>
+      <footer className="mx-auto hidden max-w-[1440px] px-4 py-10 text-xs text-muted-foreground lg:block">© 2026 ORVEX · Memecoin launchpad on LitVM</footer>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-background/90 backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-border bg-background/90 backdrop-blur-xl lg:hidden">
         {NAV.map((n) => (
-          <Link key={n.to} to={n.to} className="flex flex-col items-center gap-1 py-2.5 text-[11px] text-muted-foreground" activeProps={{ className: "text-primary-glow" }} activeOptions={{ exact: n.to === "/" }}>
+          <Link key={n.to} to={n.to} className="flex flex-col items-center gap-1 py-2.5 text-[9px] text-muted-foreground" activeProps={{ className: "text-primary-glow" }} activeOptions={{ exact: n.to === "/" }}>
             <n.icon className="size-5" />{n.label}
           </Link>
         ))}
