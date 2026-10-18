@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as DexRouteImport } from './routes/dex'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as TrendingRouteImport } from './routes/trending'
 import { Route as TokenSymbolRouteImport } from './routes/token.$symbol'
@@ -26,9 +28,19 @@ const CreateRoute = CreateRouteImport.update({
   path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DexRoute = DexRouteImport.update({
+  id: '/dex',
+  path: '/dex',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortfolioRoute = PortfolioRouteImport.update({
@@ -50,7 +62,9 @@ const TokenSymbolRoute = TokenSymbolRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
+  '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
   '/token/$symbol': typeof TokenSymbolRoute
@@ -58,7 +72,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
+  '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
   '/token/$symbol': typeof TokenSymbolRoute
@@ -67,7 +83,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
+  '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
   '/token/$symbol': typeof TokenSymbolRoute
@@ -75,15 +93,31 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/create' | '/explore' | '/portfolio' | '/trending' | '/token/$symbol'
+    | '/'
+    | '/create'
+    | '/dex'
+    | '/explore'
+    | '/leaderboard'
+    | '/portfolio'
+    | '/trending'
+    | '/token/$symbol'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/create' | '/explore' | '/portfolio' | '/trending' | '/token/$symbol'
+    | '/'
+    | '/create'
+    | '/dex'
+    | '/explore'
+    | '/leaderboard'
+    | '/portfolio'
+    | '/trending'
+    | '/token/$symbol'
   id:
     | '__root__'
     | '/'
     | '/create'
+    | '/dex'
     | '/explore'
+    | '/leaderboard'
     | '/portfolio'
     | '/trending'
     | '/token/$symbol'
@@ -92,7 +126,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateRoute: typeof CreateRoute
+  DexRoute: typeof DexRoute
   ExploreRoute: typeof ExploreRoute
+  LeaderboardRoute: typeof LeaderboardRoute
   PortfolioRoute: typeof PortfolioRoute
   TrendingRoute: typeof TrendingRoute
   TokenSymbolRoute: typeof TokenSymbolRoute
@@ -114,11 +150,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dex': {
+      id: '/dex'
+      path: '/dex'
+      fullPath: '/dex'
+      preLoaderRoute: typeof DexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/explore': {
       id: '/explore'
       path: '/explore'
       fullPath: '/explore'
       preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portfolio': {
@@ -148,7 +198,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateRoute: CreateRoute,
+  DexRoute: DexRoute,
   ExploreRoute: ExploreRoute,
+  LeaderboardRoute: LeaderboardRoute,
   PortfolioRoute: PortfolioRoute,
   TrendingRoute: TrendingRoute,
   TokenSymbolRoute: TokenSymbolRoute,
