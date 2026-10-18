@@ -61,15 +61,31 @@ const stateQuery = () => ({
 function Admin() {
   const { address, open } = useWallet();
   const access = useOwnerAccess();
-  if (!address || (!access.isPending && !access.isOwner)) return (
-    <div className="mx-auto max-w-md border-y border-border py-16 text-center">
-      <ShieldCheck className="mx-auto size-10 text-muted-foreground" />
-      <h1 className="mt-5 text-2xl font-bold">Private access</h1>
-      <p className="mt-3 text-sm text-muted-foreground">Only the connected FeeManager owner can access this page.</p>
-      {!address ? <Button className="mt-6" onClick={open}><Wallet /> Connect owner wallet</Button> : access.isError ? <Button variant="outline" className="mt-6" onClick={() => access.refetch()}><RefreshCw /> Retry verification</Button> : null}
-    </div>
-  );
-  if (!access.isOwner) return <div className="grid place-items-center py-24"><Loader2 className="size-6 animate-spin text-primary" /></div>;
+  if (!address || (!access.isPending && !access.isOwner))
+    return (
+      <div className="mx-auto max-w-md border-y border-border py-16 text-center">
+        <ShieldCheck className="mx-auto size-10 text-muted-foreground" />
+        <h1 className="mt-5 text-2xl font-bold">Private access</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Only the connected FeeManager owner can access this page.
+        </p>
+        {!address ? (
+          <Button className="mt-6" onClick={open}>
+            <Wallet /> Connect owner wallet
+          </Button>
+        ) : access.isError ? (
+          <Button variant="outline" className="mt-6" onClick={() => access.refetch()}>
+            <RefreshCw /> Retry verification
+          </Button>
+        ) : null}
+      </div>
+    );
+  if (!access.isOwner)
+    return (
+      <div className="grid place-items-center py-24">
+        <Loader2 className="size-6 animate-spin text-primary" />
+      </div>
+    );
   return <AdminConsole />;
 }
 
@@ -79,8 +95,7 @@ function AdminConsole() {
   const { data: s, isLoading, isError, refetch } = useQuery(stateQuery());
   const [busy, setBusy] = useState<string | null>(null);
 
-  const isOwner =
-    !!address && !!s && address.toLowerCase() === s.owner.toLowerCase();
+  const isOwner = !!address && !!s && address.toLowerCase() === s.owner.toLowerCase();
 
   const run = async (key: string, fn: () => Promise<`0x${string}`>) => {
     if (busy) return;
@@ -88,7 +103,10 @@ function AdminConsole() {
     try {
       const hash = await fn();
       toast.success("Transaction confirmed", {
-        action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") },
+        action: {
+          label: "View tx",
+          onClick: () => window.open(explorerTx(hash), "_blank", "noopener"),
+        },
       });
       await qc.invalidateQueries({ queryKey: ["feeManager"] });
     } catch (e) {
@@ -115,7 +133,8 @@ function AdminConsole() {
     );
 
   // On-chain shares are basis points (10000 = 100%).
-  if (!isOwner) return <div className="py-16 text-center text-muted-foreground">Owner access required.</div>;
+  if (!isOwner)
+    return <div className="py-16 text-center text-muted-foreground">Owner access required.</div>;
   const totalShare = s.treasuryShare + s.teamShare + s.marketingShare;
   const pct = (bps: number) => bps / 100;
 
@@ -123,7 +142,9 @@ function AdminConsole() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <div className="mb-1 text-[10px] uppercase tracking-widest text-primary">Owner console</div>
+          <div className="mb-1 text-[10px] uppercase tracking-widest text-primary">
+            Owner console
+          </div>
           <h1 className="flex items-center gap-2 text-3xl font-bold">
             <ShieldCheck className="size-7 text-primary-glow" /> FeeManager admin
           </h1>
@@ -147,7 +168,6 @@ function AdminConsole() {
           </a>
         </div>
       </div>
-
 
       {/* Overview */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -182,7 +202,11 @@ function AdminConsole() {
         <Section icon={<Percent className="size-4" />} title="Fee split (%)">
           <ShareForm
             disabled={!isOwner || !!busy}
-            initial={{ treasury: pct(s.treasuryShare), team: pct(s.teamShare), marketing: pct(s.marketingShare) }}
+            initial={{
+              treasury: pct(s.treasuryShare),
+              team: pct(s.teamShare),
+              marketing: pct(s.marketingShare),
+            }}
             total={pct(totalShare)}
             onSave={(sh) =>
               run("shares", () =>
@@ -222,7 +246,9 @@ function AdminConsole() {
               label="Distribute token balance"
               disabled={!isOwner || !!busy}
               busy={busy === "distributeToken"}
-              onRun={(token) => run("distributeToken", () => feeManagerDistributeToken(address as Address, token))}
+              onRun={(token) =>
+                run("distributeToken", () => feeManagerDistributeToken(address as Address, token))
+              }
             />
             <div className="flex gap-2">
               {s.paused ? (
@@ -271,7 +297,9 @@ function AdminConsole() {
             destructive
             disabled={!isOwner || !!busy}
             busy={busy === "emergencyToken"}
-            onRun={(token) => run("emergencyToken", () => feeManagerEmergencyToken(address as Address, token))}
+            onRun={(token) =>
+              run("emergencyToken", () => feeManagerEmergencyToken(address as Address, token))
+            }
           />
         </div>
       </div>
@@ -389,7 +417,11 @@ function CollectorForm({
         disabled={disabled}
       />
       <div className="flex gap-2">
-        <Button className="flex-1" disabled={disabled || !ok} onClick={() => onSet(addr as Address, true)}>
+        <Button
+          className="flex-1"
+          disabled={disabled || !ok}
+          onClick={() => onSet(addr as Address, true)}
+        >
           Authorize
         </Button>
         <Button

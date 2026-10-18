@@ -131,7 +131,9 @@ export function Shell({ children }: { children: ReactNode }) {
         © 2026 ORVEX · Memecoin launchpad on LitVM
       </footer>
 
-      <nav className={`fixed inset-x-0 bottom-0 z-40 grid ${isOwner ? "grid-cols-8" : "grid-cols-7"} border-t border-border bg-background/90 backdrop-blur-xl lg:hidden`}>
+      <nav
+        className={`fixed inset-x-0 bottom-0 z-40 grid ${isOwner ? "grid-cols-8" : "grid-cols-7"} border-t border-border bg-background/90 backdrop-blur-xl lg:hidden`}
+      >
         {visibleNav.map((n) => (
           <Link
             key={n.to}

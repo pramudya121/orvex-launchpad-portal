@@ -9,11 +9,19 @@ export function useOwnerAccess() {
   const { address } = useWallet();
   const query = useQuery({
     queryKey: ["feeManagerOwner", address],
-    queryFn: () => publicClient().readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "owner" }),
+    queryFn: () =>
+      publicClient().readContract({
+        address: CONTRACTS.feeManager,
+        abi: feeManagerAbi,
+        functionName: "owner",
+      }),
     enabled: !!address,
     staleTime: 10_000,
     refetchInterval: 15_000,
     retry: 1,
   });
-  return { ...query, isOwner: !!address && !query.isError && isFeeManagerOwner(address, query.data) };
+  return {
+    ...query,
+    isOwner: !!address && !query.isError && isFeeManagerOwner(address, query.data),
+  };
 }
