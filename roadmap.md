@@ -1,5 +1,8 @@
 # ORVEX improvements
 
+- [ ] Restrict Admin content and navigation to the connected FeeManager owner.
+- [ ] Refresh Trending, Leaderboard and Portfolio presentation and verify navigation and layouts.
+
 - [x] Harden pending-launch recovery across refresh, verify wallet chain/account, protect integer transaction limits and DEX address-based quotes; add regression tests.
 - [x] Serialize chain synchronization with private durable leases and conditional checkpoints.
 - [x] Run database and dependency scans; restrict indexing state to the indexer and update vulnerable packages (production dependency rescan clear).
