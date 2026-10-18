@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { formatUnits, type Address } from "viem";
 import {
@@ -35,6 +35,9 @@ import { MarketStatus } from "@/components/orvex/MarketStatus";
 import { fmtNum, short } from "@/lib/tokens";
 import { assetKey, minimumOutput, transactionAmount } from "@/lib/web3/trade-safety";
 import { launchTokenAbi } from "@/lib/web3/abi";
+import { DexTokenPicker } from "@/components/orvex/DexTokenPicker";
+import { LiquidityPanel } from "@/components/orvex/LiquidityPanel";
+import { poolPage } from "@/lib/web3/pools";
 
 export const Route = createFileRoute("/dex")({
   head: () => ({
@@ -75,6 +78,7 @@ function Dex() {
   const { address, open } = useWallet();
   const qc = useQueryClient();
   const [view, setView] = useState("swap");
+  const [selectedPosition, setSelectedPosition] = useState<{a: DexToken; b: DexToken} | null>(null);
   const [from, setFrom] = useState<DexToken>(
     DEX_TOKENS[0] ?? { symbol: "zkLTC", name: "zkLTC", address: null, logo: null, decimals: 18 },
   );
@@ -83,23 +87,6 @@ function Dex() {
   );
   const [amt, setAmt] = useState("");
   const [slippage, setSlippage] = useState(1);
-  const { data: launched = [] } = useQuery(tokensQuery());
-  const selectable = [
-    ...DEX_TOKENS,
-    ...launched
-      .filter(
-        (t) =>
-          t.graduated &&
-          !DEX_TOKENS.some((x) => x.address?.toLowerCase() === t.address.toLowerCase()),
-      )
-      .map((t) => ({
-        symbol: t.symbol,
-        name: t.name,
-        address: t.address as Address,
-        logo: t.logoUrl,
-        decimals: 18,
-      })),
-  ];
   const [picker, setPicker] = useState<"from" | "to" | null>(null);
   const [busy, setBusy] = useState(false);
   const [debounced, setDebounced] = useState("");
@@ -337,9 +324,9 @@ function Dex() {
 
         </TabsContent>
         <TabsContent value="liquidity">
-          <Pools positions onSelect={(a, b) => {
-            setFrom(a); setTo(b); setAmt(""); setView("swap");
-          }} />
+          <div className="space-y-8"><LiquidityPanel selected={selectedPosition} /><Pools positions onSelect={(a, b) => {
+            setSelectedPosition({a,b});
+          }} /></div>
         </TabsContent>
         <TabsContent value="pools">
         <Pools
@@ -353,39 +340,9 @@ function Dex() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!picker} onOpenChange={(o) => !o && setPicker(null)}>
-        <DialogContent className="max-w-sm bg-card">
-          <DialogHeader>
-            <DialogTitle>Select a token</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-1">
-            {selectable.map((t) => (
-              <Button
-                variant="ghost"
-                key={assetKey(t.address)}
-                onClick={() => {
-                  if (picker === "from") setFrom(t);
-                  else setTo(t);
-                  setPicker(null);
-                  setAmt("");
-                }}
-                className="flex w-full items-center gap-3 h-auto rounded-md p-2.5 text-left hover:bg-accent"
-              >
-                <Logo t={t} size={32} />
-                <span className="flex-1">
-                  <span className="block text-sm font-semibold">{t.symbol}</span>
-                  <span className="block text-xs text-muted-foreground">{t.name}</span>
-                </span>
-                {t.address && (
-                  <span className="font-mono text-[11px] text-muted-foreground">
-                    {short(t.address)}
-                  </span>
-                )}
-              </Button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DexTokenPicker open={!!picker} onClose={() => setPicker(null)} onSelect={(t) => {
+        if (picker === "from") setFrom(t); else setTo(t); setAmt("");
+      }} />
     </div>
   );
 }
@@ -429,58 +386,15 @@ function Side({
 function Pools({ onSelect, positions = false }: { onSelect: (a: DexToken, b: DexToken) => void; positions?: boolean }) {
   const { address, open } = useWallet();
   const [search, setSearch] = useState("");
-  const { data, isLoading, isError, isFetching, refetch } = useQuery({
+  const { data: pages, isLoading, isError, isFetching, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["pools", positions ? address : null],
-    queryFn: async () => {
-      const pc = publicClient();
-      const known = new Map(
-        DEX_TOKENS.filter((t) => t.address).map((t) => [t.address?.toLowerCase() ?? "", t]),
-      );
-      const len = Number(
-        await pc.readContract({
-          address: CONTRACTS.dexFactory,
-          abi: dexFactoryAbi,
-          functionName: "allPairsLength",
-        }),
-      );
-      const ids = Array.from({ length: Math.min(len, 50) }, (_, i) => BigInt(i));
-      const pairs = await Promise.all(
-        ids.map(
-          (i) =>
-            pc.readContract({
-              address: CONTRACTS.dexFactory,
-              abi: dexFactoryAbi,
-              functionName: "allPairs",
-              args: [i],
-            }) as Promise<Address>,
-        ),
-      );
-      return Promise.all(
-        pairs.map(async (p) => {
-          const [t0, t1, res] = await Promise.all([
-            pc.readContract({ address: p, abi: pairAbi, functionName: "token0" }),
-            pc.readContract({ address: p, abi: pairAbi, functionName: "token1" }),
-            pc.readContract({ address: p, abi: pairAbi, functionName: "getReserves" }),
-          ]);
-          const a = known.get(t0.toLowerCase()),
-            b = known.get(t1.toLowerCase());
-          const lpBalance = positions && address
-            ? await pc.readContract({ address: p, abi: launchTokenAbi, functionName: "balanceOf", args: [address] })
-            : 0n;
-          return {
-            lpBalance,
-            pair: p,
-            a: a ?? { symbol: short(t0), name: t0, address: t0, logo: null, decimals: 18 },
-            b: b ?? { symbol: short(t1), name: t1, address: t1, logo: null, decimals: 18 },
-            r0: Number(formatUnits(res[0], 18)),
-            r1: Number(formatUnits(res[1], 18)),
-          };
-        }),
-      );
-    },
+    enabled: !positions || !!address,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => poolPage(pageParam, positions ? address : null),
+    getNextPageParam: (page) => page.next ?? undefined,
     staleTime: 30_000,
-    refetchInterval: 30_000,
   });
+  const data = pages?.pages.flatMap((p) => p.pools);
   const list = (data ?? []).filter((p) =>
     (!positions || p.lpBalance > 0n) && `${p.a.symbol} ${p.b.symbol} ${p.pair}`.toLowerCase().includes(search.trim().toLowerCase()),
   );
@@ -507,7 +421,7 @@ function Pools({ onSelect, positions = false }: { onSelect: (a: DexToken, b: Dex
       </div>
       <div className="grid grid-cols-3 divide-x divide-border border-y border-border py-4">
         <div className="pr-3">
-          <p className="text-[10px] uppercase text-muted-foreground">Indexed pools</p>
+          <p className="text-[10px] uppercase text-muted-foreground">Loaded pools</p>
           <p className="mt-2 font-mono text-xl font-semibold">{data ? data.length : "—"}</p>
         </div>
         <div className="px-3">
@@ -602,10 +516,10 @@ function Pools({ onSelect, positions = false }: { onSelect: (a: DexToken, b: Dex
                     variant="secondary"
                     size="sm"
                     disabled={p.r0 <= 0 || p.r1 <= 0}
-                    aria-label={`Swap ${p.a.symbol} ${p.b.symbol}`}
+                    aria-label={`${positions ? "Manage" : "Swap"} ${p.a.symbol} ${p.b.symbol}`}
                     onClick={() => onSelect(p.a, p.b)}
                   >
-                    Swap
+                    {positions ? "Manage" : "Swap"}
                     <ArrowUpRight className="size-3" />
                   </Button>
                 </div>
@@ -624,8 +538,9 @@ function Pools({ onSelect, positions = false }: { onSelect: (a: DexToken, b: Dex
           ))}
         </div>
       )}
+      {hasNextPage && <div className="flex justify-center"><Button variant="outline" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>{isFetchingNextPage ? "Loading…" : "Load more pools"}</Button></div>}
       <p className="text-[10px] leading-relaxed text-muted-foreground">
-        First 50 factory pools · Reserves refresh every 30 seconds · Test assets
+        {data?.length ?? 0} / {pages?.pages[0]?.total ?? "—"} pools scanned · {search ? "Search applies to loaded pools · " : ""}Test assets
       </p>
     </section>
   );

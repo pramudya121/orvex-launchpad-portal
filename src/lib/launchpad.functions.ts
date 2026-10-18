@@ -5,6 +5,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { CURVE, marketCapBase, progress, spotPrice, type Reserves } from "./curve";
 import { activeHolders } from "./market";
 import { boundedMap } from "./bounded-map";
+import { decodeLogo, LOGO_MAX_BYTES } from "./logo-upload";
+import { TOKEN_PAGE_SIZE } from "./pagination";
 
 type TokenRow = Database["public"]["Tables"]["tokens"]["Row"];
 type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
@@ -171,7 +173,7 @@ export const listTokens = createServerFn({ method: "GET" }).handler(
       .select("*")
       .eq("onchain", true)
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(TOKEN_PAGE_SIZE);
     if (error) throw new Error("Could not load tokens");
     const stats = await loadStats(
       sb,
@@ -180,6 +182,33 @@ export const listTokens = createServerFn({ method: "GET" }).handler(
     return (tokens ?? []).map((t) => toView(t, [], stats.get(t.id)));
   },
 );
+
+export const listTokenPage = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({
+    cursor: z.object({ createdAt: z.string().datetime({ offset: true }), id: z.string().uuid() }).nullable().default(null),
+    q: z.string().max(100).default(""),
+    stage: z.enum(["all", "curve", "graduated", "favorites"]).default("all"),
+    favorites: z.array(z.string().uuid()).max(1000).default([]),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    if (!data.cursor) await sync();
+    const sb = publicClient();
+    let query = sb.from("tokens").select("*").eq("onchain", true);
+    if (data.stage === "curve" || data.stage === "graduated") query = query.eq("graduated", data.stage === "graduated");
+    if (data.stage === "favorites") {
+      if (!data.favorites.length) return { tokens: [] as TokenView[], nextCursor: null };
+      query = query.in("id", data.favorites);
+    }
+    const q = data.q.replace(/[^a-zA-Z0-9 _-]/g, "").trim();
+    if (q) query = query.or(`name.ilike.%${q}%,symbol.ilike.%${q}%,address.ilike.%${q}%`);
+    if (data.cursor) query = query.or(`created_at.lt.${data.cursor.createdAt},and(created_at.eq.${data.cursor.createdAt},id.lt.${data.cursor.id})`);
+    const { data: rows, error } = await query.order("created_at", { ascending: false }).order("id", { ascending: false }).limit(TOKEN_PAGE_SIZE + 1);
+    if (error) throw new Error("Could not load tokens");
+    const page = (rows ?? []).slice(0, TOKEN_PAGE_SIZE);
+    const stats = await loadStats(sb, page.map((t) => t.id));
+    const last = page.at(-1);
+    return { tokens: page.map((t) => toView(t, [], stats.get(t.id))), nextCursor: (rows?.length ?? 0) > TOKEN_PAGE_SIZE && last ? { createdAt: last.created_at, id: last.id } : null };
+  });
 
 export const getTokenDetail = createServerFn({ method: "GET" })
   .inputValidator((d: { symbol: string }) =>
@@ -223,15 +252,15 @@ export const uploadLogo = createServerFn({ method: "POST" })
           .min(1)
           .max(10)
           .regex(/^[A-Za-z0-9]+$/),
-        logoBase64: z.string().max(3_000_000),
+        logoBase64: z.string().max(4 * Math.ceil(LOGO_MAX_BYTES / 3)),
         logoType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif"]),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    const bytes = decodeLogo(data.logoBase64, data.logoType);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const bytes = Uint8Array.from(atob(data.logoBase64), (c) => c.charCodeAt(0));
-    const path = `${data.symbol.toUpperCase()}-${Date.now()}.${data.logoType.split("/")[1]}`;
+    const path = `${data.symbol.toUpperCase()}-${crypto.randomUUID()}.${data.logoType.split("/")[1]}`;
     const up = await supabaseAdmin.storage
       .from("token-logos")
       .upload(path, bytes, { contentType: data.logoType });
