@@ -147,18 +147,22 @@ function Explore() {
             </option>
           ))}
         </select>
-        <div className="flex items-center gap-1 rounded-md border border-input bg-card p-0.5">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase text-muted-foreground">Window</span>
+          <div className="flex items-center gap-1 rounded-full border border-input bg-card p-1">
           {MARKET_WINDOWS.map((w) => (
-            <button
+            <Button
               key={w}
+              variant={s.win === w ? "default" : "ghost"}
+              size="sm"
+              aria-pressed={s.win === w}
               onClick={() => update({ win: w })}
-              className={`rounded px-2.5 py-1 font-mono text-[11px] font-semibold uppercase transition ${
-                s.win === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
+              className="h-7 rounded-full px-3 text-xs"
             >
-              {w}
-            </button>
+              {w === "all" ? "All" : w.toUpperCase()}
+            </Button>
           ))}
+          </div>
         </div>
         <div className="flex gap-1">
           <Button

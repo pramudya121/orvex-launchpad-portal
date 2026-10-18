@@ -7,7 +7,7 @@ import { activeHolders } from "./market";
 
 type TokenRow = Database["public"]["Tables"]["tokens"]["Row"];
 type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
-type MarketStats = Database["public"]["Functions"]["token_market_stats"]["Returns"][number];
+type MarketStats = Database["public"]["Functions"]["token_market_stats"]["Returns"][number] & Partial<Database["public"]["Functions"]["token_market_all_stats"]["Returns"][number]>;
 
 export type TokenView = {
   id: string;
@@ -36,6 +36,9 @@ export type TokenView = {
   change7d: number;
   volume7dUsd: number;
   trades7d: number;
+  changeAll?: number;
+  volumeAllUsd?: number;
+  tradesAll?: number;
   holders: number;
   reserves: Reserves;
 };
@@ -104,9 +107,13 @@ const toTrade = (r: TradeRow): TradeView => ({
 
 async function loadStats(sb: ReturnType<typeof publicClient>, ids: string[]) {
   if (!ids.length) return new Map<string, MarketStats>();
-  const { data, error } = await sb.rpc("token_market_stats", { token_ids: ids });
-  if (error) throw new Error("Market statistics could not be loaded");
-  return new Map((data ?? []).map((s) => [s.token_id, s]));
+  const [recent, lifetime] = await Promise.all([
+    sb.rpc("token_market_stats", { token_ids: ids }),
+    sb.rpc("token_market_all_stats", { token_ids: ids }),
+  ]);
+  if (recent.error || lifetime.error) throw new Error("Market statistics could not be loaded");
+  const all = new Map((lifetime.data ?? []).map((s) => [s.token_id, s]));
+  return new Map((recent.data ?? []).map((s) => [s.token_id, { ...s, ...all.get(s.token_id) }]));
 }
 
 function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenView {
@@ -143,6 +150,9 @@ function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenVie
     change7d: first7 ? (price / first7 - 1) * 100 : 0,
     volume7dUsd: (stats ? Number(stats.volume_7d) : 0) * CURVE.baseUsd,
     trades7d: stats ? Number(stats.trades_7d) : 0,
+    changeAll: stats?.first_price_all ? (price / Number(stats.first_price_all) - 1) * 100 : 0,
+    volumeAllUsd: Number(stats?.volume_all ?? 0) * CURVE.baseUsd,
+    tradesAll: Number(stats?.trades_all ?? 0),
     holders: stats ? Number(stats.holders) : activeHolders(trades),
     reserves: r,
   };
