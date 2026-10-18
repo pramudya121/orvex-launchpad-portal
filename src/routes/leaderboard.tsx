@@ -9,7 +9,7 @@ import { windowChange, windowVolume } from "@/lib/market";
 import { fmtUsd, short } from "@/lib/tokens";
 import { explorerAddress } from "@/lib/web3/chain";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
-import { LiveControls, Medal, RankCard, pct, type RankWindow } from "@/components/orvex/RankBoard";
+import { WindowChart, LiveControls, Medal, RankCard, pct, type RankWindow } from "@/components/orvex/RankBoard";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/leaderboard")({
@@ -90,6 +90,7 @@ function Leaderboard() {
         </div>
       </section>
 
+      <WindowChart tokens={tokens} win={win} setWin={setWin} change={windowChange} volume={windowVolume} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { label: "Tokens ranked", value: String(m.ranked), icon: <Activity className="size-3.5" />, cls: "text-primary" },
