@@ -15,6 +15,20 @@
       "when": 1792333523029,
       "tag": "0001_live_trade_event_index",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792334383793,
+      "tag": "0002_chain_event_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792334410846,
+      "tag": "0003_indexed_market_statistics",
+      "breakpoints": true
     }
   ]
 }

@@ -26,6 +26,7 @@ import { tokensQuery } from "@/lib/queries";
 import { useWallet } from "./wallet";
 import { supabase } from "@/integrations/supabase/client";
 import { TokenLogo } from "./TokenLogo";
+import orvexLogo from "@/assets/orvex-logo.jpg.asset.json";
 
 const NAV = [
   { to: "/", label: "Home", icon: Home },
@@ -79,11 +80,8 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="min-h-screen pb-20 lg:pb-0">
       <header className="sticky top-0 z-40 border-b border-border bg-background/75 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-3 px-4">
-          <Link to="/" className="flex items-center gap-2 font-bold tracking-tight">
-            <span className="grid size-8 place-items-center rounded-lg bg-gradient-primary shadow-glow">
-              O
-            </span>
-            ORVEX
+          <Link to="/" aria-label="ORVEX home" className="block h-16 w-20 shrink-0">
+            <img src={orvexLogo.url} alt="ORVEX" className="h-full w-full object-contain" />
           </Link>
           <nav className="ml-4 hidden items-center gap-1 lg:flex">
             {NAV.slice(1).map((n) => (

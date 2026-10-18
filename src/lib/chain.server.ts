@@ -10,6 +10,7 @@ import {
 } from "viem";
 import { bondingCurveAbi, factoryAbi, launchTokenAbi } from "./web3/abi";
 import { CONTRACTS, litvm } from "./web3/chain";
+import { findLaunchBlock, scanWindow } from "./chain-index";
 
 // The configured multicall address reverts on LiteForge; use direct RPC calls.
 export const chainClient = () =>
@@ -65,11 +66,12 @@ async function upsertToken(
   creator: Address,
   meta?: Record<string, string | undefined>,
 ) {
-  const { data: existing } = await sb
+  const { data: existing, error: lookupError } = await sb
     .from("tokens")
     .select("id")
     .ilike("address", token)
     .maybeSingle();
+  if (lookupError) throw new Error("Token lookup failed");
   const state = await readCurve(curve);
   if (existing) {
     const { error } = await sb
@@ -102,11 +104,17 @@ async function upsertToken(
     })
     .select("id")
     .single();
-  if (error) throw new Error("Token could not be indexed");
+  if (error) {
+    if (error.code === "23505") {
+      const { data: concurrent, error: concurrentError } = await sb.from("tokens").select("id").eq("address", token.toLowerCase()).maybeSingle();
+      if (!concurrentError && concurrent) return concurrent.id;
+    }
+    throw new Error("Token could not be indexed");
+  }
   return row?.id ?? null;
 }
 
-/** Stores Bought/Sold logs of one curve as trades (deduped by tx hash). */
+/** Stores Bought/Sold logs with event identity and block provenance. */
 async function storeTradeLogs(
   sb: Admin,
   tokenId: string,
@@ -138,6 +146,8 @@ async function storeTradeLogs(
         trader: String(isBuy ? a.buyer : a.seller).toLowerCase(),
         tx_hash: l.transactionHash.toLowerCase(),
         log_index: l.logIndex,
+        block_number: Number(l.blockNumber),
+        block_hash: l.blockHash,
         created_at: times.get(l.blockNumber) ?? new Date().toISOString(),
       },
       { onConflict: "tx_hash,log_index", ignoreDuplicates: true },
@@ -164,7 +174,11 @@ export async function indexTransaction(
   }).filter((l) => l.address.toLowerCase() === CONTRACTS.factory.toLowerCase());
   for (const l of launched) {
     const own = l.args.creator.toLowerCase() === receipt.from.toLowerCase() ? meta : undefined;
-    await upsertToken(sb, l.args.token, l.args.curve, l.args.creator, own);
+    const id = await upsertToken(sb, l.args.token, l.args.curve, l.args.creator, own);
+    if (id) {
+      const { error } = await sb.from("tokens").update({ launch_block: Number(receipt.blockNumber) }).eq("id", id);
+      if (error) throw new Error("Launch block could not be saved");
+    }
     symbol = String(l.args.symbol).toUpperCase();
   }
 
@@ -174,14 +188,16 @@ export async function indexTransaction(
     [receipt.blockNumber, new Date(Number(block.timestamp) * 1000).toISOString()],
   ]);
   for (const curve of curves) {
-    const { data: t } = await sb
+    const { data: t, error: lookupError } = await sb
       .from("tokens")
       .select("id, symbol")
       .eq("curve_address", curve)
       .maybeSingle();
+    if (lookupError) throw new Error("Curve lookup failed");
     if (!t) continue;
     const state = await readCurve(curve as Address);
-    await sb.from("tokens").update(state).eq("id", t.id);
+    const { error: stateError } = await sb.from("tokens").update(state).eq("id", t.id);
+    if (stateError) throw new Error("Curve state could not be saved");
     await storeTradeLogs(
       sb,
       t.id,
@@ -201,7 +217,8 @@ const LOG_WINDOW = 9_000n;
 
 /** Discovers factory tokens and pulls recent trades. Throttled; safe to call on every list request. */
 export async function syncChain(sb: Admin, force = false) {
-  const { data: s } = await sb.from("chain_sync").select("*").eq("id", "factory").maybeSingle();
+  const { data: s, error: checkpointError } = await sb.from("chain_sync").select("*").eq("id", "factory").maybeSingle();
+  if (checkpointError) throw new Error("Sync checkpoint could not be loaded");
   if (!force && s && Date.now() - +new Date(s.updated_at) < SYNC_EVERY_MS) return;
   const c = chainClient();
   const latest = await c.getBlockNumber();
@@ -212,8 +229,9 @@ export async function syncChain(sb: Admin, force = false) {
       functionName: "getAllTokensLength",
     }),
   );
-  const { data: known } = await sb.from("tokens").select("address").eq("onchain", true);
-  const addresses = new Set((known ?? []).map((t) => t.address.toLowerCase()));
+  const { data: known, error: knownError } = await sb.from("tokens").select("id, address, launch_block").eq("onchain", true);
+  if (knownError) throw new Error("Known launches could not be loaded");
+  const addresses = new Map((known ?? []).map((t) => [t.address.toLowerCase(), t]));
   for (let i = 0; i < len; i++) {
     const [token, curve, creator, createdAt] = (await c.readContract({
       address: CONTRACTS.factory,
@@ -221,26 +239,30 @@ export async function syncChain(sb: Admin, force = false) {
       functionName: "allTokens",
       args: [BigInt(i)],
     })) as readonly [Address, Address, Address, bigint];
-    if (addresses.has(token.toLowerCase())) continue;
-    const id = await upsertToken(sb, token, curve, creator);
+    const existing = addresses.get(token.toLowerCase());
+    if (existing?.launch_block !== null && existing?.launch_block !== undefined) continue;
+    const id = existing?.id ?? await upsertToken(sb, token, curve, creator);
     if (id) {
+      const launchBlock = await findLaunchBlock(createdAt, latest, async (blockNumber) => (await c.getBlock({ blockNumber })).timestamp);
       const { error } = await sb
         .from("tokens")
-        .update({ created_at: new Date(Number(createdAt) * 1000).toISOString() })
+        .update({ created_at: new Date(Number(createdAt) * 1000).toISOString(), launch_block: Number(launchBlock) })
         .eq("id", id);
       if (error) throw new Error("Launch timestamp could not be saved");
     }
   }
 
-  const { data: tokens } = await sb
+  const { data: tokens, error: tokensError } = await sb
     .from("tokens")
-    .select("id, curve_address, synced_block, graduated")
+    .select("id, curve_address, synced_block, launch_block, graduated")
     .eq("onchain", true)
     .not("curve_address", "is", null);
+  if (tokensError) throw new Error("Curves could not be loaded");
   for (const t of tokens ?? []) {
-    const from = BigInt(t.synced_block);
-    const end = from + LOG_WINDOW < latest ? from + LOG_WINDOW : latest;
-    if (from > latest) continue;
+    if (t.launch_block === null) throw new Error("Launch block must be resolved before scanning");
+    const window = scanWindow(BigInt(t.synced_block), BigInt(t.launch_block), latest, LOG_WINDOW);
+    if (!window) continue;
+    const { from, end } = window;
     const curve = t.curve_address as Address;
     const logs = await c.getLogs({ address: curve, fromBlock: from, toBlock: end });
     const state = await readCurve(curve);
@@ -265,7 +287,8 @@ export async function syncChain(sb: Admin, force = false) {
       .eq("id", t.id);
     if (error) throw new Error("Curve checkpoint could not be saved");
   }
-  await sb
+  const { error: saveError } = await sb
     .from("chain_sync")
     .upsert({ id: "factory", last_block: Number(latest), updated_at: new Date().toISOString() });
+  if (saveError) throw new Error("Factory checkpoint could not be saved");
 }
