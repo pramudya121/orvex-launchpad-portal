@@ -174,7 +174,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      token_market_stats: {
+        Args: { token_ids: string[] }
+        Returns: {
+          first_price_24h: number
+          holders: number
+          token_id: string
+          trades_24h: number
+          volume_24h: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
