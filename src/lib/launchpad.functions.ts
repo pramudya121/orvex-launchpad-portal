@@ -7,6 +7,7 @@ import { activeHolders } from "./market";
 
 type TokenRow = Database["public"]["Tables"]["tokens"]["Row"];
 type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
+type MarketStats = Database["public"]["Functions"]["token_market_stats"]["Returns"][number];
 
 export type TokenView = {
   id: string;
@@ -98,12 +99,19 @@ const toTrade = (r: TradeRow): TradeView => ({
   txHash: r.tx_hash,
 });
 
-function toView(t: TokenRow, trades: TradeView[]): TokenView {
+async function loadStats(sb: ReturnType<typeof publicClient>, ids: string[]) {
+  if (!ids.length) return new Map<string, MarketStats>();
+  const { data, error } = await sb.rpc("token_market_stats", { token_ids: ids });
+  if (error) throw new Error("Market statistics could not be loaded");
+  return new Map((data ?? []).map((s) => [s.token_id, s]));
+}
+
+function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenView {
   const r = reservesOf(t);
   const price = spotPrice(r);
   const since = Date.now() - 86_400_000;
   const recent = trades.filter((x) => +new Date(x.createdAt) >= since);
-  const first = recent[recent.length - 1]?.price ?? price;
+  const first = stats?.first_price_24h ?? recent[recent.length - 1]?.price ?? price;
   return {
     id: t.id,
     address: t.address,
@@ -126,9 +134,9 @@ function toView(t: TokenRow, trades: TradeView[]): TokenView {
     graduated: t.graduated,
     maxBuy: t.max_buy === null ? null : Number(t.max_buy),
     change24h: first ? (price / first - 1) * 100 : 0,
-    volume24hUsd: recent.reduce((s, x) => s + x.baseAmount, 0) * CURVE.baseUsd,
-    trades24h: recent.length,
-    holders: activeHolders(trades),
+    volume24hUsd: (stats ? Number(stats.volume_24h) : recent.reduce((s, x) => s + x.baseAmount, 0)) * CURVE.baseUsd,
+    trades24h: stats ? Number(stats.trades_24h) : recent.length,
+    holders: stats ? Number(stats.holders) : activeHolders(trades),
     reserves: r,
   };
 }
@@ -144,18 +152,8 @@ export const listTokens = createServerFn({ method: "GET" }).handler(
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error("Could not load tokens");
-    const { data: trades } = await sb
-      .from("token_trades")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(2000);
-    const byToken = new Map<string, TradeView[]>();
-    for (const tr of trades ?? []) {
-      const arr = byToken.get(tr.token_id) ?? [];
-      arr.push(toTrade(tr));
-      byToken.set(tr.token_id, arr);
-    }
-    return (tokens ?? []).map((t) => toView(t, byToken.get(t.id) ?? []));
+    const stats = await loadStats(sb, (tokens ?? []).map((t) => t.id));
+    return (tokens ?? []).map((t) => toView(t, [], stats.get(t.id)));
   },
 );
 
@@ -166,7 +164,7 @@ export const getTokenDetail = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await sync();
     const sb = publicClient();
-    const { data: t } = await sb
+    const { data: t, error: tokenError } = await sb
       .from("tokens")
       .select("*")
       .eq("onchain", true)
@@ -174,15 +172,18 @@ export const getTokenDetail = createServerFn({ method: "GET" })
       .order("created_at")
       .limit(1)
       .maybeSingle();
+    if (tokenError) throw new Error("Token could not be loaded");
     if (!t) return null;
-    const { data: trades } = await sb
+    const { data: trades, error: tradesError } = await sb
       .from("token_trades")
       .select("*")
       .eq("token_id", t.id)
       .order("created_at", { ascending: false })
       .limit(1000);
+    if (tradesError) throw new Error("Trade history could not be loaded");
+    const stats = await loadStats(sb, [t.id]);
     const tv = (trades ?? []).map(toTrade);
-    return { token: toView(t, tv), trades: tv };
+    return { token: toView(t, tv, stats.get(t.id)), trades: tv };
   });
 
 const addr = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "Invalid wallet address");
@@ -214,6 +215,7 @@ export const uploadLogo = createServerFn({ method: "POST" })
     const signed = await supabaseAdmin.storage
       .from("token-logos")
       .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+    if (signed.error || !signed.data?.signedUrl) return { error: "Logo link could not be created" };
     return { url: signed.data?.signedUrl ?? null };
   });
 
@@ -253,13 +255,15 @@ export const getPortfolio = createServerFn({ method: "GET" })
     await sync();
     const sb = publicClient();
     const a = data.address.toLowerCase();
-    const { data: tokens } = await sb.from("tokens").select("*").eq("onchain", true).limit(500);
-    const { data: trades } = await sb
+    const { data: tokens, error: tokensError } = await sb.from("tokens").select("*").eq("onchain", true).limit(500);
+    if (tokensError) throw new Error("Portfolio tokens could not be loaded");
+    const { data: trades, error: tradesError } = await sb
       .from("token_trades")
       .select("*")
       .eq("trader", a)
       .order("created_at", { ascending: false })
       .limit(1000);
+    if (tradesError) throw new Error("Portfolio history could not be loaded");
     const { chainClient } = await import("./chain.server");
     const { launchTokenAbi } = await import("./web3/abi");
     const { formatEther } = await import("viem");
@@ -309,12 +313,14 @@ export const getPortfolio = createServerFn({ method: "GET" })
 export const getLeaderboard = createServerFn({ method: "GET" }).handler(async () => {
   await sync();
   const sb = publicClient();
-  const { data: tokens } = await sb.from("tokens").select("*").eq("onchain", true).limit(500);
-  const { data: trades } = await sb
+  const { data: tokens, error: tokensError } = await sb.from("tokens").select("*").eq("onchain", true).limit(500);
+  if (tokensError) throw new Error("Leaderboard tokens could not be loaded");
+  const { data: trades, error: tradesError } = await sb
     .from("token_trades")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(5000);
+  if (tradesError) throw new Error("Leaderboard trades could not be loaded");
   const sym = new Map((tokens ?? []).map((t) => [t.id, t.symbol]));
   const traders = new Map<
     string,

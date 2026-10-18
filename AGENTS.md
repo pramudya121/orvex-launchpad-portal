@@ -20,5 +20,7 @@
 - Market lists share URL-based filters, a local watchlist provider and shared query invalidation; polling is a fallback to database Realtime, because event delivery and chain confirmation cannot be assumed instantaneous.
 - Chain indexing reconciles factory entries by address and advances bounded durable event checkpoints only after successful writes, so outages cannot silently skip historical events.
 - Chain reads use direct RPC calls rather than the configured multicall contract, because that address currently reverts on LiteForge.
+- Indexed trades retain block number/hash and token launch block; first history scans resolve the deployment timestamp to a block so new launches never start scanning from genesis.
+- Market counts, 24-hour volume and curve-trade holder estimates use the RLS-respecting token_market_stats database function, so a globally capped trade feed cannot silently change token metrics.
 - Contracts live in `contracts/*.sol` and must mirror `src/lib/curve.ts` constants; `src/lib/web3/abi.ts` and `bytecode.ts` are generated from them with solc 0.8.24 — regenerate after any contract edit.
 - lightweight-charts can't parse oklch()/CSS variables — chart colors are fixed sRGB constants in `PriceChart.tsx`.
