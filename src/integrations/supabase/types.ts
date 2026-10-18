@@ -188,6 +188,15 @@ export type Database = {
         Args: { completed_block?: number; owner_id: string }
         Returns: undefined
       }
+      token_market_all_stats: {
+        Args: { token_ids: string[] }
+        Returns: {
+          first_price_all: number
+          token_id: string
+          trades_all: number
+          volume_all: number
+        }[]
+      }
       token_market_stats: {
         Args: { token_ids: string[] }
         Returns: {
