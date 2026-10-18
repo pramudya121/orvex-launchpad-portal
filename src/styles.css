@@ -32,6 +32,7 @@
   --color-silver: var(--silver);
   --color-success: var(--success);
   --color-danger: var(--danger);
+  --color-warning: var(--warning);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -74,6 +75,7 @@
   --silver: oklch(0.72 0.006 220);
   --success: oklch(0.76 0.14 158);
   --danger: oklch(0.68 0.17 22);
+  --warning: oklch(0.8 0.15 80);
   --destructive: oklch(0.68 0.17 22);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(1 0 0 / 8%);
