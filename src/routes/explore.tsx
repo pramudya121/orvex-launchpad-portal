@@ -36,7 +36,7 @@ export const Route = createFileRoute("/explore")({
       ? String(s["stage"])
       : "all",
     view: s["view"] === "list" ? ("list" as const) : ("grid" as const),
-    win: MARKET_WINDOWS.includes(s["win"] as MarketWindow)
+    win: MARKET_WINDOWS.includes(s["win"] as (typeof MARKET_WINDOWS)[number])
       ? (s["win"] as MarketWindow)
       : ("24h" as MarketWindow),
   }),
