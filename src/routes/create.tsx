@@ -368,8 +368,9 @@ function Create() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Every token launches on its own fair bonding-curve contract. When the curve sells
-                out, the token graduates and liquidity moves to the DEX. The dev buy is sent as a
-                second transaction right after launch.
+                out, the token graduates and liquidity moves to the DEX. With an initial buy, your
+                wallet asks for two confirmations in a row: the first deploys the token, the second
+                makes your opening buy at the best price.
               </p>
             </div>
           )}
@@ -406,7 +407,7 @@ function Create() {
               {[
                 ["Name", f.name],
                 ["Symbol", f.symbol],
-                ["Dev buy", devBuy ? `${devBuy} zkLTC` : "None"],
+                ["Initial buy", devBuy ? `${devBuy} zkLTC (2nd confirmation)` : "None"],
                 ["Network", "LitVM LiteForge"],
                 ["Launch fee", fee === undefined ? "…" : `${fee} zkLTC`],
               ].map(([k, v]) => (
