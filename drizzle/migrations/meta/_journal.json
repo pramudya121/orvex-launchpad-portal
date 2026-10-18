@@ -15,6 +15,13 @@
       "when": 1792337105991,
       "tag": "0001_remix_empty_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792337745662,
+      "tag": "0002_add_7d_market_stats",
+      "breakpoints": true
     }
   ]
 }

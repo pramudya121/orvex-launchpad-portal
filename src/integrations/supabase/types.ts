@@ -192,10 +192,13 @@ export type Database = {
         Args: { token_ids: string[] }
         Returns: {
           first_price_24h: number
+          first_price_7d: number
           holders: number
           token_id: string
           trades_24h: number
+          trades_7d: number
           volume_24h: number
+          volume_7d: number
         }[]
       }
     }
