@@ -12,10 +12,10 @@ import {
 import { CONTRACTS } from "./chain";
 import { publicClient, walletClient } from "./client";
 import { CURVE } from "../curve";
+import { minimumOutput, transactionAmount, validateSwapPath } from "./trade-safety";
 
-const toWei = (n: number, decimals = 18) =>
-  parseUnits(n.toFixed(Math.min(decimals, 18)).replace(/\.?0+$/, "") || "0", decimals);
-const minOut = (n: number, d = 18) => toWei(n * (1 - CURVE.slippage), d);
+const toWei = transactionAmount;
+const minOut = (n: number, d = 18) => minimumOutput(toWei(n, d), Math.round(CURVE.slippage * 10_000));
 
 async function confirm(hash: Hash) {
   const r = await publicClient().waitForTransactionReceipt({ hash });
@@ -148,10 +148,11 @@ export const routePath = (from: Address | null, to: Address | null): Address[] =
 };
 
 export async function quoteSwap(from: Address | null, to: Address | null, amountIn: bigint) {
+  if (amountIn <= 0n) return null;
   const pc = publicClient();
   const direct = [from ?? CONTRACTS.wzkltc, to ?? CONTRACTS.wzkltc] as Address[];
   const tries = [direct, routePath(from, to)].filter(
-    (p, i, arr) => i === 0 || p.length !== arr[0]!.length,
+    (p, i, arr) => i === 0 || p.length !== arr[0]?.length,
   );
   for (const path of tries) {
     try {
@@ -161,7 +162,8 @@ export async function quoteSwap(from: Address | null, to: Address | null, amount
         functionName: "getAmountsOut",
         args: [amountIn, path],
       })) as bigint[];
-      if (out[out.length - 1]! > 0n) return { path, amountOut: out[out.length - 1]! };
+      const amountOut = out[out.length - 1];
+      if (amountOut !== undefined && amountOut > 0n) return { path, amountOut };
     } catch {
       /* no pool on this path */
     }
@@ -177,6 +179,9 @@ export async function swap(
   amountOutMin: bigint,
   path: Address[],
 ) {
+  if (amountIn <= 0n || amountOutMin <= 0n) throw new Error("Amount and minimum output must be positive");
+  const wrapping = (!from && to === CONTRACTS.wzkltc) || (from === CONTRACTS.wzkltc && !to);
+  if (!wrapping) validateSwapPath(from, to, CONTRACTS.wzkltc, path);
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200);
   const w = await walletClient(account);
   // Native zkLTC ↔ WzkLTC is a plain wrap/unwrap, no pool needed.

@@ -212,14 +212,17 @@ export async function indexTransaction(
   return { ok: true as const, symbol };
 }
 
-const SYNC_EVERY_MS = 30_000;
 const LOG_WINDOW = 9_000n;
 
 /** Discovers factory tokens and pulls recent trades. Throttled; safe to call on every list request. */
 export async function syncChain(sb: Admin, force = false) {
-  const { data: s, error: checkpointError } = await sb.from("chain_sync").select("*").eq("id", "factory").maybeSingle();
-  if (checkpointError) throw new Error("Sync checkpoint could not be loaded");
-  if (!force && s && Date.now() - +new Date(s.updated_at) < SYNC_EVERY_MS) return;
+  const owner = crypto.randomUUID();
+  const { data: acquired, error: leaseError } = await sb.rpc("acquire_chain_sync_lease", { owner_id: owner, force_sync: force });
+  if (leaseError) throw new Error("Sync lease could not be acquired");
+  if (!acquired) return;
+  const started = Date.now();
+  let completedBlock: number | undefined;
+  try {
   const c = chainClient();
   const latest = await c.getBlockNumber();
   const len = Number(
@@ -233,6 +236,7 @@ export async function syncChain(sb: Admin, force = false) {
   if (knownError) throw new Error("Known launches could not be loaded");
   const addresses = new Map((known ?? []).map((t) => [t.address.toLowerCase(), t]));
   for (let i = 0; i < len; i++) {
+    if (Date.now() - started > 55_000) return;
     const [token, curve, creator, createdAt] = (await c.readContract({
       address: CONTRACTS.factory,
       abi: factoryAbi,
@@ -259,6 +263,7 @@ export async function syncChain(sb: Admin, force = false) {
     .not("curve_address", "is", null);
   if (tokensError) throw new Error("Curves could not be loaded");
   for (const t of tokens ?? []) {
+    if (Date.now() - started > 55_000) return;
     if (t.launch_block === null) throw new Error("Launch block must be resolved before scanning");
     const window = scanWindow(BigInt(t.synced_block), BigInt(t.launch_block), latest, LOG_WINDOW);
     if (!window) continue;
@@ -284,11 +289,13 @@ export async function syncChain(sb: Admin, force = false) {
     const { error } = await sb
       .from("tokens")
       .update({ ...state, synced_block: Number(end) })
-      .eq("id", t.id);
+      .eq("id", t.id)
+      .eq("synced_block", t.synced_block);
     if (error) throw new Error("Curve checkpoint could not be saved");
   }
-  const { error: saveError } = await sb
-    .from("chain_sync")
-    .upsert({ id: "factory", last_block: Number(latest), updated_at: new Date().toISOString() });
-  if (saveError) throw new Error("Factory checkpoint could not be saved");
+  completedBlock = Number(latest);
+  } finally {
+    const { error } = await sb.rpc("release_chain_sync_lease", { owner_id: owner, ...(completedBlock === undefined ? {} : { completed_block: completedBlock }) });
+    if (error) throw new Error("Sync lease could not be released");
+  }
 }

@@ -41,7 +41,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const [acc] = (await eth.request({ method: "eth_requestAccounts" })) as Address[];
       if (!acc) return;
-      await ensureChain(eth).catch(() => toast.warning(`Switch your wallet to ${litvm.name} to trade`));
+      await ensureChain(eth);
       localStorage.setItem(KIND_KEY, "injected");
       setAddress(getAddress(acc));
       toast.success("Wallet connected", { description: litvm.name });
