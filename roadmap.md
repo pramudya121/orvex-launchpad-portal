@@ -1,9 +1,11 @@
 # ORVEX improvements
 
-- [ ] Remove Explore Window label and emphasize market cap on token cards.
-- [ ] Separate DEX Swap/Liquidity/Pools navigation and add uploaded ORVX logo.
-- [ ] Move Create logo upload to top and show contract supply allocations.
-- [ ] Inspect and improve database performance and integrity; verify public flows and document remaining scale blockers.
+- [x] Remove Explore Window label and emphasize market cap on token cards.
+- [x] Separate DEX Swap/Liquidity/Pools navigation and add uploaded ORVX logo.
+- [x] Move Create logo upload to top and show contract supply allocations.
+- [x] Inspect database coverage, add wallet/creator/symbol indexes, avoid lifetime price array aggregation and bound portfolio chain concurrency; verify public statistics and page flows.
+- [ ] Certify thousand-user production capacity — blocked by no representative load traffic/history or funded signing wallets; current list/history caps, public upload abuse protection and chain-sync throughput still require further implementation and load verification before certification.
+- [ ] Verify wallet LP positions — blocked by no connected signing wallet with LP tokens; disconnected Liquidity and real factory Pools verified.
 
 - [x] Add Explore Window All/24H/7D with matching real statistics and window sorting tests.
 - [x] Save the supplied ITACHI logo and verify it displays on cards and token details.
