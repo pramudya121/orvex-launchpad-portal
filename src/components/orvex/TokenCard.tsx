@@ -5,8 +5,9 @@ import type { TokenView } from "@/lib/launchpad.functions";
 import { Change } from "./Change";
 import { CurveProgress } from "./CurveProgress";
 import { FavoriteButton } from "./Watchlist";
+import { windowChange, type MarketWindow } from "@/lib/market";
 
-export function TokenCard({ t }: { t: TokenView }) {
+export function TokenCard({ t, win = "24h" }: { t: TokenView; win?: MarketWindow }) {
   const [failed, setFailed] = useState(false);
   return (
     <article className="group min-w-0 overflow-hidden rounded-lg border border-border bg-card p-1.5 transition-colors hover:border-primary/50">
@@ -51,7 +52,7 @@ export function TokenCard({ t }: { t: TokenView }) {
         </div>
         <div className="mt-1 flex items-center justify-between gap-1">
           <div className="truncate font-mono text-xs font-bold">{fmtUsd(t.priceUsd)}</div>
-          <Change v={t.change24h} />
+          <Change v={windowChange(t, win)} />
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-1 font-mono text-[9px] text-muted-foreground">
           <span>{fmtUsd(t.marketCapUsd)} MC</span>

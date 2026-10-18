@@ -184,7 +184,7 @@ function Create() {
       });
 
       if (devBuy > 0) {
-        setDeploy({ p: 80, label: "Confirm your dev buy" });
+        setDeploy({ p: 80, label: "Confirm your initial buy (transaction 2 of 2)" });
         try {
           const pc = publicClient();
           const [reserves, sale, total, protocolFee, creatorFee] = await Promise.all([
@@ -218,9 +218,9 @@ function Create() {
           };
           const bh = await buyOnchain(address, curve, f.devBuy, quoteBuy(r, devBuy).tokenAmount);
           await doIndex({ data: { txHash: bh } });
-          toast.success(`Dev buy of ${devBuy} zkLTC done`);
+          toast.success(`Initial buy of ${devBuy} zkLTC done`);
         } catch (e) {
-          toast.error(`Dev buy failed: ${walletError(e)}`);
+          toast.error(`Initial buy failed: ${walletError(e)}`);
         }
       }
       setDeploy({ p: 100, label: "Done" });
@@ -339,7 +339,7 @@ function Create() {
                   </Button>
                 </div>
               )}
-              <Field label="Dev buy (zkLTC, optional)">
+              <Field label="Initial buy (zkLTC, optional)">
                 <Input
                   type="number"
                   min="0"
@@ -368,8 +368,9 @@ function Create() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Every token launches on its own fair bonding-curve contract. When the curve sells
-                out, the token graduates and liquidity moves to the DEX. The dev buy is sent as a
-                second transaction right after launch.
+                out, the token graduates and liquidity moves to the DEX. With an initial buy, your
+                wallet asks for two confirmations in a row: the first deploys the token, the second
+                makes your opening buy at the best price.
               </p>
             </div>
           )}
@@ -406,7 +407,7 @@ function Create() {
               {[
                 ["Name", f.name],
                 ["Symbol", f.symbol],
-                ["Dev buy", devBuy ? `${devBuy} zkLTC` : "None"],
+                ["Initial buy", devBuy ? `${devBuy} zkLTC (2nd confirmation)` : "None"],
                 ["Network", "LitVM LiteForge"],
                 ["Launch fee", fee === undefined ? "…" : `${fee} zkLTC`],
               ].map(([k, v]) => (

@@ -2,12 +2,17 @@ import type { TokenView } from "./launchpad.functions";
 
 export const MARKET_SORTS = ["new", "mc", "vol", "prog", "change", "old"] as const;
 export type MarketSort = (typeof MARKET_SORTS)[number];
+export const MARKET_WINDOWS = ["24h", "7d"] as const;
+export type MarketWindow = (typeof MARKET_WINDOWS)[number];
+export const windowChange = (t: TokenView, w: MarketWindow) => (w === "7d" ? t.change7d : t.change24h);
+export const windowVolume = (t: TokenView, w: MarketWindow) => (w === "7d" ? t.volume7dUsd : t.volume24hUsd);
 export function filterMarket(
   tokens: TokenView[],
   search: string,
   sort: MarketSort,
   stage: string,
   favorites?: string[],
+  win: MarketWindow = "24h",
 ) {
   const q = search.trim().toLowerCase();
   return tokens
@@ -20,9 +25,9 @@ export function filterMarket(
     )
     .sort((a, b) => {
       if (sort === "mc") return b.marketCapUsd - a.marketCapUsd;
-      if (sort === "vol") return b.volume24hUsd - a.volume24hUsd;
+      if (sort === "vol") return windowVolume(b, win) - windowVolume(a, win);
       if (sort === "prog") return b.progress - a.progress;
-      if (sort === "change") return b.change24h - a.change24h;
+      if (sort === "change") return windowChange(b, win) - windowChange(a, win);
       return (sort === "old" ? 1 : -1) * (+new Date(a.createdAt) - +new Date(b.createdAt));
     });
 }

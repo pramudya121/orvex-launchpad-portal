@@ -8,8 +8,9 @@ import { TokenLogo } from "./TokenLogo";
 import { Change } from "./Change";
 import { FavoriteButton } from "./Watchlist";
 import { CurveProgress } from "./CurveProgress";
+import { windowChange, windowVolume, type MarketWindow } from "@/lib/market";
 
-export function MarketTable({ tokens }: { tokens: TokenView[] }) {
+export function MarketTable({ tokens, win = "24h" }: { tokens: TokenView[]; win?: MarketWindow }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-card">
       <table className="w-full min-w-[980px] text-xs">
@@ -19,10 +20,10 @@ export function MarketTable({ tokens }: { tokens: TokenView[] }) {
               "#",
               "Token",
               "Price",
-              "24h %",
+              `${win} %`,
               "MCap / Curve",
               "Raised",
-              "Vol 24h",
+              `Vol ${win}`,
               "Holders*",
               "Age",
               "Trade",
@@ -54,7 +55,7 @@ export function MarketTable({ tokens }: { tokens: TokenView[] }) {
               </td>
               <td className="px-3 py-4 font-mono">{fmtUsd(t.priceUsd)}</td>
               <td className="px-3 py-4">
-                <Change v={t.change24h} />
+                <Change v={windowChange(t, win)} />
               </td>
               <td className="w-40 px-3 py-4">
                 <div className="mb-1 font-mono font-semibold">{fmtUsd(t.marketCapUsd)}</div>
@@ -63,7 +64,7 @@ export function MarketTable({ tokens }: { tokens: TokenView[] }) {
               <td className="px-3 py-4 font-mono" title={`${t.realBase.toFixed(5)} zkLTC raised`}>
                 {fmtUsd(t.realBase * CURVE.baseUsd)}
               </td>
-              <td className="px-3 py-4 font-mono">{fmtUsd(t.volume24hUsd)}</td>
+              <td className="px-3 py-4 font-mono">{fmtUsd(windowVolume(t, win))}</td>
               <td className="px-3 py-4 font-mono">{t.holders}</td>
               <td className="px-3 py-4 text-muted-foreground">{fmtAge(t.createdAt)}</td>
               <td className="px-3 py-4">

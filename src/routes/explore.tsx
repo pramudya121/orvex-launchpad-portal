@@ -5,7 +5,7 @@ import { LayoutGrid, List, Search, X, Compass } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { tokensQuery } from "@/lib/queries";
-import { filterMarket, MARKET_SORTS, type MarketSort } from "@/lib/market";
+import { filterMarket, MARKET_SORTS, MARKET_WINDOWS, type MarketSort, type MarketWindow } from "@/lib/market";
 import { TokenCard, TokenCardSkeleton } from "@/components/orvex/TokenCard";
 import { MarketTable } from "@/components/orvex/MarketTable";
 import { MarketStatus } from "@/components/orvex/MarketStatus";
@@ -15,7 +15,7 @@ import { MarketError, MarketNotFound } from "@/components/orvex/RouteFeedback";
 export const Route = createFileRoute("/explore")({
   validateSearch: (
     s: Record<string, unknown>,
-  ): { q?: string; sort?: MarketSort; stage?: string; view?: "grid" | "list" } => ({
+  ): { q?: string; sort?: MarketSort; stage?: string; view?: "grid" | "list"; win?: MarketWindow } => ({
     q: typeof s["q"] === "string" ? s["q"] : "",
     sort: MARKET_SORTS.includes(s["sort"] as MarketSort)
       ? (s["sort"] as MarketSort)
@@ -24,6 +24,7 @@ export const Route = createFileRoute("/explore")({
       ? String(s["stage"])
       : "all",
     view: s["view"] === "list" ? ("list" as const) : ("grid" as const),
+    win: MARKET_WINDOWS.includes(s["win"] as MarketWindow) ? (s["win"] as MarketWindow) : ("24h" as MarketWindow),
   }),
   head: () => ({
     meta: [
@@ -66,14 +67,15 @@ function Explore() {
     sort: search.sort ?? "new",
     stage: search.stage ?? "all",
     view: search.view ?? "grid",
+    win: search.win ?? "24h",
   };
   const navigate = Route.useNavigate();
   const { favorites } = useWatchlist();
   const update = (value: Partial<typeof s>) =>
     navigate({ search: (old) => ({ ...old, ...value }), replace: true });
   const list = useMemo(
-    () => filterMarket(data, s.q, s.sort, s.stage, favorites),
-    [data, s.q, s.sort, s.stage, favorites],
+    () => filterMarket(data, s.q, s.sort, s.stage, favorites, s.win),
+    [data, s.q, s.sort, s.stage, favorites, s.win],
   );
   return (
     <div className="space-y-5">
@@ -111,7 +113,7 @@ function Explore() {
           </Button>
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -145,6 +147,19 @@ function Explore() {
             </option>
           ))}
         </select>
+        <div className="flex items-center gap-1 rounded-md border border-input bg-card p-0.5">
+          {MARKET_WINDOWS.map((w) => (
+            <button
+              key={w}
+              onClick={() => update({ win: w })}
+              className={`rounded px-2.5 py-1 font-mono text-[11px] font-semibold uppercase transition ${
+                s.win === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {w}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-1">
           <Button
             variant={s.view === "grid" ? "secondary" : "ghost"}
@@ -190,11 +205,11 @@ function Explore() {
       ) : s.view === "grid" ? (
         <div className="token-grid">
           {list.map((t) => (
-            <TokenCard key={t.id} t={t} />
+            <TokenCard key={t.id} t={t} win={s.win} />
           ))}
         </div>
       ) : (
-        <MarketTable tokens={list} />
+        <MarketTable tokens={list} win={s.win} />
       )}
       <p className="text-[10px] text-muted-foreground">
         Raised is curve funding, not DEX liquidity. Holder counts reflect indexed curve trades, not

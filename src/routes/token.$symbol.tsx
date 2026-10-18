@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
 import { Change } from "@/components/orvex/Change";
 import { PriceChart } from "@/components/orvex/PriceChart";
+import { TokenInfoPanel } from "@/components/orvex/TokenInfoPanel";
 import { CurveProgress } from "@/components/orvex/CurveProgress";
 import { useWallet } from "@/components/orvex/wallet";
 import { FavoriteButton } from "@/components/orvex/Watchlist";
@@ -264,6 +265,7 @@ function TokenPage() {
         <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <CurveCard t={t} />
           <SwapPanel t={t} />
+          <TokenInfoPanel t={t} trades={trades} />
         </div>
       </div>
     </div>
