@@ -8,8 +8,9 @@ import { TokenLogo } from "./TokenLogo";
 import { Change } from "./Change";
 import { FavoriteButton } from "./Watchlist";
 import { CurveProgress } from "./CurveProgress";
+import { windowChange, windowVolume, type MarketWindow } from "@/lib/market";
 
-export function MarketTable({ tokens }: { tokens: TokenView[] }) {
+export function MarketTable({ tokens, win = "24h" }: { tokens: TokenView[]; win?: MarketWindow }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-card">
       <table className="w-full min-w-[980px] text-xs">
