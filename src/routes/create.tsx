@@ -10,7 +10,7 @@ import { buyOnchain, createOnchain, creationFee, walletError } from "@/lib/web3/
 import { CONTRACTS, explorerTx } from "@/lib/web3/chain";
 import { publicClient } from "@/lib/web3/client";
 import { bondingCurveAbi } from "@/lib/web3/abi";
-import { useState } from "react";
+import { useState, useId } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ function Create() {
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [pendingHash, setPendingHash] = useState<string | null>(null);
   const [deploy, setDeploy] = useState<{ p: number; label: string } | null>(null);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
   const { data: fee, isError: feeError, refetch: retryFee } = useQuery({ queryKey: ["creationFee"], queryFn: async () => Number(formatEther(await creationFee())), staleTime: 60_000, refetchInterval: 60_000 });
@@ -67,7 +68,7 @@ function Create() {
 
   const run = async () => {
     setConfirm(false);
-    if (!address || fee === undefined || !devBuyValid || deploy) return;
+    if (!address || fee === undefined || !devBuyValid || deploy || pendingHash) return;
     const symbol = f.symbol.trim().toUpperCase();
     try {
       if (logoFile && logoFile.size > 2 * 1024 * 1024) { toast.error("Logo must be under 2MB"); return; }
@@ -81,8 +82,10 @@ function Create() {
       setDeploy({ p: 35, label: "Confirm the launch in your wallet" });
       const { hash, curve } = await createOnchain(address, { name: f.name.trim(), symbol });
       setDeploy({ p: 65, label: "Indexing your token" });
+      setPendingHash(hash);
       const r = await doIndex({ data: { txHash: hash, meta: { description: f.description, twitter: f.twitter || undefined, telegram: f.telegram || undefined, website: f.website || undefined, logo: logoUrl } } });
       if ("error" in r) { toast.warning("Launch confirmed; market indexing needs retry", { description: r.error }); return; }
+      setPendingHash(null);
       toast.success(`${symbol} is live on LitVM`, { action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") } });
 
       if (devBuy > 0) {
@@ -170,6 +173,7 @@ function Create() {
             </dl>
           )}
 
+          {pendingHash && !deploy && <div role="status" className="space-y-3 rounded-lg border border-border p-4"><p className="text-sm">Launch confirmed. Do not deploy again; retry adding it to the market.</p><div className="flex gap-2"><Button variant="outline" onClick={async () => { setDeploy({p:65,label:"Retrying market indexing"}); try { const result = await doIndex({data:{txHash:pendingHash}}); if ("error" in result) toast.error(result.error); else {setPendingHash(null); navigate({to:"/token/$symbol",params:{symbol:result.symbol}});} } catch(e) {toast.error(walletError(e));} finally {setDeploy(null);} }}>Retry indexing</Button><Button variant="link" asChild><a href={explorerTx(pendingHash)} target="_blank" rel="noreferrer">View transaction</a></Button></div></div>}
           {deploy && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm"><Loader2 className="size-4 animate-spin" /> {deploy.label}…</div>
@@ -182,7 +186,7 @@ function Create() {
             {step < 3 ? (
               <Button disabled={!valid} onClick={() => setStep(step + 1)} className="bg-gradient-primary">Continue</Button>
             ) : (
-              <Button disabled={!!deploy || fee === undefined || !devBuyValid} onClick={() => (address ? setConfirm(true) : open())} className="bg-gradient-primary shadow-glow">{address ? "Deploy token" : "Connect wallet to deploy"}</Button>
+              <Button disabled={!!deploy || !!pendingHash || fee === undefined || !devBuyValid} onClick={() => (address ? setConfirm(true) : open())} className="bg-gradient-primary shadow-glow">{address ? "Deploy token" : "Connect wallet to deploy"}</Button>
             )}
           </div>
         </div>
@@ -220,5 +224,6 @@ function Create() {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-2"><Label>{label}</Label>{children}</div>;
+  const id = useId();
+  return <div className="space-y-2"><Label id={id}>{label}</Label><div aria-labelledby={id}>{children}</div></div>;
 }
