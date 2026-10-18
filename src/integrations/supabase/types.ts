@@ -68,6 +68,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          onchain: boolean
           real_base: number
           symbol: string
           telegram: string | null
@@ -86,6 +87,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          onchain?: boolean
           real_base?: number
           symbol: string
           telegram?: string | null
@@ -104,6 +106,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          onchain?: boolean
           real_base?: number
           symbol?: string
           telegram?: string | null
