@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { fmtAge, fmtUsd, short } from "@/lib/tokens";
-import { CURVE } from "@/lib/curve";
 import type { TokenView } from "@/lib/launchpad.functions";
 import { Change } from "./Change";
 import { CurveProgress } from "./CurveProgress";
