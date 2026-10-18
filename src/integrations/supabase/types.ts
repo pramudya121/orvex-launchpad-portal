@@ -18,16 +18,22 @@ export type Database = {
         Row: {
           id: string
           last_block: number
+          lease_id: string | null
+          lease_until: string | null
           updated_at: string
         }
         Insert: {
           id: string
           last_block?: number
+          lease_id?: string | null
+          lease_until?: string | null
           updated_at?: string
         }
         Update: {
           id?: string
           last_block?: number
+          lease_id?: string | null
+          lease_until?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -174,6 +180,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_chain_sync_lease: {
+        Args: { force_sync?: boolean; owner_id: string }
+        Returns: boolean
+      }
+      release_chain_sync_lease: {
+        Args: { completed_block?: number; owner_id: string }
+        Returns: undefined
+      }
       token_market_stats: {
         Args: { token_ids: string[] }
         Returns: {

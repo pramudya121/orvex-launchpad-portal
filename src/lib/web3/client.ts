@@ -25,6 +25,9 @@ export async function walletClient(account: Address) {
   const eth = injected();
   if (!eth) throw new Error("No browser wallet found");
   await ensureChain(eth);
+  const accounts = await eth.request({ method: "eth_accounts" });
+  if (!accounts.some((a) => a.toLowerCase() === account.toLowerCase()))
+    throw new Error("Wallet account changed; reconnect before trading");
   return createWalletClient({ account, chain: litvm, transport: custom(eth) });
 }
 
@@ -47,4 +50,6 @@ export async function ensureChain(eth: Eth) {
       ],
     });
   }
+  const current = await eth.request({ method: "eth_chainId" });
+  if (Number(current) !== litvm.id) throw new Error(`Switch your wallet to ${litvm.name} to trade`);
 }

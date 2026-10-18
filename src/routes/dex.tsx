@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { formatUnits, parseUnits, type Address } from "viem";
+import { formatUnits, type Address } from "viem";
 import { ArrowDownUp, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import { dexFactoryAbi, pairAbi } from "@/lib/web3/abi";
 import { tokensQuery } from "@/lib/queries";
 import { MarketStatus } from "@/components/orvex/MarketStatus";
 import { fmtNum, short } from "@/lib/tokens";
+import { assetKey, minimumOutput, transactionAmount } from "@/lib/web3/trade-safety";
+import { launchTokenAbi } from "@/lib/web3/abi";
 
 export const Route = createFileRoute("/dex")({
   head: () => ({
@@ -96,7 +98,7 @@ function Dex() {
 
   const amountIn = useMemo(() => {
     try {
-      return Number(debounced) > 0 ? parseUnits(debounced, from.decimals) : 0n;
+      return Number(debounced) > 0 ? transactionAmount(debounced, from.decimals) : 0n;
     } catch {
       return 0n;
     }
@@ -110,16 +112,16 @@ function Dex() {
     isFetching,
     isError: quoteError,
   } = useQuery({
-    queryKey: ["dexQuote", from.symbol, to.symbol, amountIn.toString()],
+    queryKey: ["dexQuote", assetKey(from.address), assetKey(to.address), amountIn.toString()],
     queryFn: async () =>
       isWrap
         ? { path: [] as Address[], amountOut: amountIn }
         : quoteSwap(from.address, to.address, amountIn),
-    enabled: amountIn > 0n && from.symbol !== to.symbol,
+    enabled: amountIn > 0n && assetKey(from.address) !== assetKey(to.address),
     refetchInterval: 10_000,
   });
   const { data: bal } = useQuery({
-    queryKey: ["dexBal", address, from.symbol],
+    queryKey: ["dexBal", address, assetKey(from.address)],
     queryFn: () => {
       if (!address) throw new Error("Connect a wallet");
       return tokenBalance(address, from.address);
@@ -132,11 +134,11 @@ function Dex() {
   const balance = bal !== undefined ? Number(formatUnits(bal, from.decimals)) : null;
   const err = quoteError
     ? "Quote unavailable — network could not respond"
-    : from.symbol === to.symbol
+    : assetKey(from.address) === assetKey(to.address)
       ? "Pick two different tokens"
       : amountIn > 0n && !isFetching && quote === null
         ? "No liquidity for this pair yet"
-        : balance !== null && Number(amt) > balance
+        : bal !== undefined && amountIn > bal
           ? "Insufficient balance"
           : null;
 
@@ -149,8 +151,31 @@ function Dex() {
     if (!address || !quote || amt !== debounced || isFetching || busy) return;
     setBusy(true);
     try {
-      const min = (quote.amountOut * BigInt(Math.round((1 - slippage / 100) * 10_000))) / 10_000n;
-      const hash = await swap(address, from.address, to.address, amountIn, min, quote.path);
+      const pc = publicClient();
+      const [fromDecimals, toDecimals] = await Promise.all([
+        from.address
+          ? pc.readContract({
+              address: from.address,
+              abi: launchTokenAbi,
+              functionName: "decimals",
+            })
+          : 18,
+        to.address
+          ? pc.readContract({ address: to.address, abi: launchTokenAbi, functionName: "decimals" })
+          : 18,
+      ]);
+      if (Number(fromDecimals) !== from.decimals || Number(toDecimals) !== to.decimals)
+        throw new Error(
+          "Token precision differs from this listing; swap stopped for your protection",
+        );
+      const fresh = isWrap
+        ? { path: [] as Address[], amountOut: amountIn }
+        : await quoteSwap(from.address, to.address, amountIn);
+      if (!fresh) throw new Error("No liquidity for this pair yet");
+      const min = minimumOutput(quote.amountOut, Math.round(slippage * 100));
+      if (fresh.amountOut < min)
+        throw new Error("Price moved too much — review the refreshed quote");
+      const hash = await swap(address, from.address, to.address, amountIn, min, fresh.path);
       toast.success(`Swapped ${amt} ${from.symbol} → ${fmtNum(out, 4)} ${to.symbol}`, {
         action: {
           label: "View tx",
@@ -299,7 +324,7 @@ function Dex() {
             {selectable.map((t) => (
               <Button
                 variant="ghost"
-                key={t.symbol}
+                key={assetKey(t.address)}
                 onClick={() => {
                   if (picker === "from") setFrom(t);
                   else setTo(t);

@@ -106,7 +106,11 @@ async function upsertToken(
     .single();
   if (error) {
     if (error.code === "23505") {
-      const { data: concurrent, error: concurrentError } = await sb.from("tokens").select("id").eq("address", token.toLowerCase()).maybeSingle();
+      const { data: concurrent, error: concurrentError } = await sb
+        .from("tokens")
+        .select("id")
+        .eq("address", token.toLowerCase())
+        .maybeSingle();
       if (!concurrentError && concurrent) return concurrent.id;
     }
     throw new Error("Token could not be indexed");
@@ -176,7 +180,10 @@ export async function indexTransaction(
     const own = l.args.creator.toLowerCase() === receipt.from.toLowerCase() ? meta : undefined;
     const id = await upsertToken(sb, l.args.token, l.args.curve, l.args.creator, own);
     if (id) {
-      const { error } = await sb.from("tokens").update({ launch_block: Number(receipt.blockNumber) }).eq("id", id);
+      const { error } = await sb
+        .from("tokens")
+        .update({ launch_block: Number(receipt.blockNumber) })
+        .eq("id", id);
       if (error) throw new Error("Launch block could not be saved");
     }
     symbol = String(l.args.symbol).toUpperCase();
@@ -212,83 +219,115 @@ export async function indexTransaction(
   return { ok: true as const, symbol };
 }
 
-const SYNC_EVERY_MS = 30_000;
 const LOG_WINDOW = 9_000n;
 
 /** Discovers factory tokens and pulls recent trades. Throttled; safe to call on every list request. */
 export async function syncChain(sb: Admin, force = false) {
-  const { data: s, error: checkpointError } = await sb.from("chain_sync").select("*").eq("id", "factory").maybeSingle();
-  if (checkpointError) throw new Error("Sync checkpoint could not be loaded");
-  if (!force && s && Date.now() - +new Date(s.updated_at) < SYNC_EVERY_MS) return;
-  const c = chainClient();
-  const latest = await c.getBlockNumber();
-  const len = Number(
-    await c.readContract({
-      address: CONTRACTS.factory,
-      abi: factoryAbi,
-      functionName: "getAllTokensLength",
-    }),
-  );
-  const { data: known, error: knownError } = await sb.from("tokens").select("id, address, launch_block").eq("onchain", true);
-  if (knownError) throw new Error("Known launches could not be loaded");
-  const addresses = new Map((known ?? []).map((t) => [t.address.toLowerCase(), t]));
-  for (let i = 0; i < len; i++) {
-    const [token, curve, creator, createdAt] = (await c.readContract({
-      address: CONTRACTS.factory,
-      abi: factoryAbi,
-      functionName: "allTokens",
-      args: [BigInt(i)],
-    })) as readonly [Address, Address, Address, bigint];
-    const existing = addresses.get(token.toLowerCase());
-    if (existing?.launch_block !== null && existing?.launch_block !== undefined) continue;
-    const id = existing?.id ?? await upsertToken(sb, token, curve, creator);
-    if (id) {
-      const launchBlock = await findLaunchBlock(createdAt, latest, async (blockNumber) => (await c.getBlock({ blockNumber })).timestamp);
+  const owner = crypto.randomUUID();
+  const { data: acquired, error: leaseError } = await sb.rpc("acquire_chain_sync_lease", {
+    owner_id: owner,
+    force_sync: force,
+  });
+  if (leaseError) throw new Error("Sync lease could not be acquired");
+  if (!acquired) return;
+  const started = Date.now();
+  let completedBlock: number | undefined;
+  try {
+    const c = chainClient();
+    const latest = await c.getBlockNumber();
+    const len = Number(
+      await c.readContract({
+        address: CONTRACTS.factory,
+        abi: factoryAbi,
+        functionName: "getAllTokensLength",
+      }),
+    );
+    const { data: known, error: knownError } = await sb
+      .from("tokens")
+      .select("id, address, launch_block")
+      .eq("onchain", true);
+    if (knownError) throw new Error("Known launches could not be loaded");
+    const addresses = new Map((known ?? []).map((t) => [t.address.toLowerCase(), t]));
+    for (let i = 0; i < len; i++) {
+      if (Date.now() - started > 55_000) return;
+      const [token, curve, creator, createdAt] = (await c.readContract({
+        address: CONTRACTS.factory,
+        abi: factoryAbi,
+        functionName: "allTokens",
+        args: [BigInt(i)],
+      })) as readonly [Address, Address, Address, bigint];
+      const existing = addresses.get(token.toLowerCase());
+      if (existing?.launch_block !== null && existing?.launch_block !== undefined) continue;
+      const id = existing?.id ?? (await upsertToken(sb, token, curve, creator));
+      if (id) {
+        const launchBlock = await findLaunchBlock(
+          createdAt,
+          latest,
+          async (blockNumber) => (await c.getBlock({ blockNumber })).timestamp,
+        );
+        const { error } = await sb
+          .from("tokens")
+          .update({
+            created_at: new Date(Number(createdAt) * 1000).toISOString(),
+            launch_block: Number(launchBlock),
+          })
+          .eq("id", id);
+        if (error) throw new Error("Launch timestamp could not be saved");
+      }
+    }
+
+    const { data: tokens, error: tokensError } = await sb
+      .from("tokens")
+      .select("id, curve_address, synced_block, launch_block, graduated")
+      .eq("onchain", true)
+      .not("curve_address", "is", null);
+    if (tokensError) throw new Error("Curves could not be loaded");
+    for (const t of tokens ?? []) {
+      if (Date.now() - started > 55_000) return;
+      if (t.launch_block === null) throw new Error("Launch block must be resolved before scanning");
+      const window = scanWindow(BigInt(t.synced_block), BigInt(t.launch_block), latest, LOG_WINDOW);
+      if (!window) continue;
+      const { from, end } = window;
+      const curve = t.curve_address as Address;
+      const logs = await c.getLogs({ address: curve, fromBlock: from, toBlock: end });
+      const state = await readCurve(curve);
+      if (logs.length) {
+        const blocks = [
+          ...new Set(logs.flatMap((l) => (l.blockNumber === null ? [] : [l.blockNumber]))),
+        ];
+        const times = new Map<bigint, string>();
+        await Promise.all(
+          blocks.map(async (b) =>
+            times.set(
+              b,
+              new Date(
+                Number((await c.getBlock({ blockNumber: b })).timestamp) * 1000,
+              ).toISOString(),
+            ),
+          ),
+        );
+        await storeTradeLogs(
+          sb,
+          t.id,
+          logs as never,
+          times,
+          state.virtual_base,
+          state.virtual_token,
+        );
+      }
       const { error } = await sb
         .from("tokens")
-        .update({ created_at: new Date(Number(createdAt) * 1000).toISOString(), launch_block: Number(launchBlock) })
-        .eq("id", id);
-      if (error) throw new Error("Launch timestamp could not be saved");
+        .update({ ...state, synced_block: Number(end) })
+        .eq("id", t.id)
+        .eq("synced_block", t.synced_block);
+      if (error) throw new Error("Curve checkpoint could not be saved");
     }
+    completedBlock = Number(latest);
+  } finally {
+    const { error } = await sb.rpc("release_chain_sync_lease", {
+      owner_id: owner,
+      ...(completedBlock === undefined ? {} : { completed_block: completedBlock }),
+    });
+    if (error) throw new Error("Sync lease could not be released");
   }
-
-  const { data: tokens, error: tokensError } = await sb
-    .from("tokens")
-    .select("id, curve_address, synced_block, launch_block, graduated")
-    .eq("onchain", true)
-    .not("curve_address", "is", null);
-  if (tokensError) throw new Error("Curves could not be loaded");
-  for (const t of tokens ?? []) {
-    if (t.launch_block === null) throw new Error("Launch block must be resolved before scanning");
-    const window = scanWindow(BigInt(t.synced_block), BigInt(t.launch_block), latest, LOG_WINDOW);
-    if (!window) continue;
-    const { from, end } = window;
-    const curve = t.curve_address as Address;
-    const logs = await c.getLogs({ address: curve, fromBlock: from, toBlock: end });
-    const state = await readCurve(curve);
-    if (logs.length) {
-      const blocks = [
-        ...new Set(logs.flatMap((l) => (l.blockNumber === null ? [] : [l.blockNumber]))),
-      ];
-      const times = new Map<bigint, string>();
-      await Promise.all(
-        blocks.map(async (b) =>
-          times.set(
-            b,
-            new Date(Number((await c.getBlock({ blockNumber: b })).timestamp) * 1000).toISOString(),
-          ),
-        ),
-      );
-      await storeTradeLogs(sb, t.id, logs as never, times, state.virtual_base, state.virtual_token);
-    }
-    const { error } = await sb
-      .from("tokens")
-      .update({ ...state, synced_block: Number(end) })
-      .eq("id", t.id);
-    if (error) throw new Error("Curve checkpoint could not be saved");
-  }
-  const { error: saveError } = await sb
-    .from("chain_sync")
-    .upsert({ id: "factory", last_block: Number(latest), updated_at: new Date().toISOString() });
-  if (saveError) throw new Error("Factory checkpoint could not be saved");
 }
