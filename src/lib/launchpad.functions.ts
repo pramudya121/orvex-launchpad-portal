@@ -185,3 +185,80 @@ export const getPortfolio = createServerFn({ method: "GET" })
       history: (trades ?? []).slice(0, 20).map((x) => ({ ...toTrade(x), symbol: held?.find((h) => h.id === x.token_id)?.symbol ?? "?" })),
     };
   });
+
+// ---------------- on-chain mode ----------------
+
+/** Uploads a logo before the on-chain createToken call; the returned URL is stored as the token's metadata URI. */
+export const uploadLogo = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({
+    symbol: z.string().trim().min(1).max(10).regex(/^[A-Za-z0-9]+$/),
+    logoBase64: z.string().max(3_000_000),
+    logoType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif"]),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bytes = Uint8Array.from(atob(data.logoBase64), (c) => c.charCodeAt(0));
+    const path = `${data.symbol.toUpperCase()}-${Date.now()}.${data.logoType.split("/")[1]}`;
+    const up = await supabaseAdmin.storage.from("token-logos").upload(path, bytes, { contentType: data.logoType });
+    if (up.error) return { error: "Logo upload failed" };
+    const signed = await supabaseAdmin.storage.from("token-logos").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+    return { url: signed.data?.signedUrl ?? null };
+  });
+
+/**
+ * Indexes a confirmed launchpad transaction: reads the receipt from LitVM, decodes
+ * TokenCreated / Trade events emitted by the configured launchpad, and mirrors them
+ * into the database. Event data is the source of truth; the caller only supplies the hash.
+ */
+export const indexTx = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({
+    txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    meta: z.object({
+      description: z.string().max(280).optional(), twitter: z.string().max(100).optional(),
+      telegram: z.string().max(100).optional(), website: z.string().max(200).optional(),
+    }).optional(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { createPublicClient, http, parseEventLogs, formatEther } = await import("viem");
+    const { litvm, LAUNCHPAD_ADDRESS } = await import("./web3/chain");
+    const { launchpadAbi } = await import("./web3/abi");
+    if (!LAUNCHPAD_ADDRESS) return { error: "Launchpad contract not configured" };
+    const client = createPublicClient({ chain: litvm, transport: http() });
+    const receipt = await client.waitForTransactionReceipt({ hash: data.txHash as `0x${string}`, timeout: 60_000 });
+    if (receipt.status !== "success") return { error: "Transaction reverted" };
+    const logs = parseEventLogs({ abi: launchpadAbi, logs: receipt.logs })
+      .filter((l) => l.address.toLowerCase() === LAUNCHPAD_ADDRESS.toLowerCase());
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let symbol: string | null = null;
+
+    for (const l of logs) {
+      if (l.eventName === "TokenCreated") {
+        const a = l.args;
+        symbol = a.symbol.toUpperCase();
+        const own = data.meta && a.creator.toLowerCase() === receipt.from.toLowerCase() ? data.meta : {};
+        await supabaseAdmin.from("tokens").upsert({
+          address: a.token.toLowerCase(), name: a.name, symbol, creator: a.creator.toLowerCase(),
+          logo_url: a.uri || null, description: own.description ?? "", twitter: own.twitter || null,
+          telegram: own.telegram || null, website: own.website || null, onchain: true,
+        }, { onConflict: "address", ignoreDuplicates: true });
+      }
+    }
+    for (const l of logs) {
+      if (l.eventName !== "Trade") continue;
+      const a = l.args;
+      const { data: t } = await supabaseAdmin.from("tokens").select("id, symbol").ilike("address", a.token).maybeSingle();
+      if (!t) continue;
+      symbol = t.symbol;
+      const vB = Number(formatEther(a.virtualBase)), vT = Number(formatEther(a.virtualToken));
+      const sold = Number(formatEther(a.tokensSold));
+      await supabaseAdmin.from("tokens").update({
+        virtual_base: vB, virtual_token: vT, tokens_sold: sold, real_base: Number(formatEther(a.realBase)),
+        graduated: sold >= CURVE.curveSupply,
+      }).eq("id", t.id);
+      await supabaseAdmin.from("token_trades").upsert({
+        token_id: t.id, side: a.isBuy ? "buy" : "sell", base_amount: Number(formatEther(a.baseAmount)),
+        token_amount: Number(formatEther(a.tokenAmount)), price: vB / vT, trader: a.trader.toLowerCase(), tx_hash: data.txHash.toLowerCase(),
+      }, { onConflict: "tx_hash", ignoreDuplicates: true });
+    }
+    return { ok: true as const, symbol };
+  });
