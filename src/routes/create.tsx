@@ -145,7 +145,7 @@ function Create() {
         <div className="text-xs uppercase tracking-wider text-muted-foreground">Live preview</div>
         <div className="glass mt-3 rounded-2xl p-5">
           <div className="flex items-center gap-3">
-            {logo ? <img src={logo} alt="" className="size-12 rounded-full object-cover" /> : <TokenLogo symbol={f.symbol || "??"} hue={(f.symbol.charCodeAt(0) || 210) * 7} size={48} />}
+            {logo ? <img src={logo} alt="" className="size-12 rounded-full object-cover" /> : <TokenLogo symbol={f.symbol || "??"} size={48} />}
             <div><div className="font-semibold">{f.name || "Token name"}</div><div className="text-xs text-muted-foreground">${f.symbol || "SYMBOL"}</div></div>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">{f.description || "Your description appears here."}</p>
