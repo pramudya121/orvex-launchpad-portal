@@ -36,7 +36,7 @@ export function PriceChart({ trades }: { trades: TradeView[] }) {
   useEffect(() => {
     const a = api.current;
     if (!a) return;
-    const start = CURVE.initVirtualBase / CURVE.initVirtualToken;
+    const start = [...trades].sort((x, y) => +new Date(x.createdAt) - +new Date(y.createdAt))[0]?.price ?? 0;
     const candles = buildCandles(trades, tf, start).map((k) => ({ ...k, open: k.open * CURVE.baseUsd, high: k.high * CURVE.baseUsd, low: k.low * CURVE.baseUsd, close: k.close * CURVE.baseUsd }));
     a.c.setData(candles.map((k) => ({ ...k, time: k.time as UTCTimestamp })));
     a.v.setData(candles.map((k) => ({ time: k.time as UTCTimestamp, value: k.volume, color: k.close >= k.open ? COLORS.up : COLORS.down })));

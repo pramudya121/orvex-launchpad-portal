@@ -43,8 +43,8 @@ async function upsertToken(sb: Admin, token: Address, curve: Address, creator: A
   const { data: row } = await sb.from("tokens").insert({
     address: token.toLowerCase(), curve_address: curve.toLowerCase(), creator: creator.toLowerCase(),
     name: String(name).slice(0, 64), symbol: String(symbol).toUpperCase().slice(0, 16), onchain: true,
-    description: meta?.description ?? "", logo_url: meta?.logo || null,
-    twitter: meta?.twitter || null, telegram: meta?.telegram || null, website: meta?.website || null, ...state,
+    description: meta?.["description"] ?? "", logo_url: meta?.["logo"] || null,
+    twitter: meta?.["twitter"] || null, telegram: meta?.["telegram"] || null, website: meta?.["website"] || null, ...state,
   }).select("id").single();
   return row?.id ?? null;
 }
