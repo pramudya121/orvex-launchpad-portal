@@ -23,7 +23,7 @@ export async function ensureChain(eth: Eth) {
     if ((e as { code?: number }).code !== 4902) throw e;
     await eth.request({
       method: "wallet_addEthereumChain",
-      params: [{ chainId: id, chainName: litvm.name, nativeCurrency: litvm.nativeCurrency, rpcUrls: [...litvm.rpcUrls.default.http], blockExplorerUrls: [litvm.blockExplorers!.default.url] }],
+      params: [{ chainId: id, chainName: litvm.name, nativeCurrency: litvm.nativeCurrency, rpcUrls: [...litvm.rpcUrls.default.http], blockExplorerUrls: [litvm.blockExplorers.default.url] }],
     });
   }
 }

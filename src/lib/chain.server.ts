@@ -4,7 +4,8 @@ import { createPublicClient, formatEther, http, parseEventLogs, type Address, ty
 import { bondingCurveAbi, factoryAbi, launchTokenAbi } from "./web3/abi";
 import { CONTRACTS, litvm } from "./web3/chain";
 
-export const chainClient = () => createPublicClient({ chain: litvm, transport: http(), batch: { multicall: true } });
+// The configured multicall address reverts on LiteForge; use direct RPC calls.
+export const chainClient = () => createPublicClient({ chain: litvm, transport: http(undefined, { timeout: 15_000, retryCount: 1 }) });
 type Admin = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 const n = (v: bigint) => Number(formatEther(v));
 

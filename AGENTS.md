@@ -19,5 +19,6 @@
 - The active UI uses an injected wallet and deployed LitVM contracts; confirmed receipt events supply launch addresses and server indexing deduplicates trades by `(tx_hash, log_index)` so simulation races and multiple events cannot corrupt the index.
 - Market lists share URL-based filters, a local watchlist provider and shared query invalidation; polling is a fallback to database Realtime, because event delivery and chain confirmation cannot be assumed instantaneous.
 - Chain indexing reconciles factory entries by address and advances bounded durable event checkpoints only after successful writes, so outages cannot silently skip historical events.
+- Chain reads use direct RPC calls rather than the configured multicall contract, because that address currently reverts on LiteForge.
 - Contracts live in `contracts/*.sol` and must mirror `src/lib/curve.ts` constants; `src/lib/web3/abi.ts` and `bytecode.ts` are generated from them with solc 0.8.24 — regenerate after any contract edit.
 - lightweight-charts can't parse oklch()/CSS variables — chart colors are fixed sRGB constants in `PriceChart.tsx`.
