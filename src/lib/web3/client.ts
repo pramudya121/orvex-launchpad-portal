@@ -14,10 +14,16 @@ type Eth = EIP1193Provider & {
   on?: (e: string, f: (...a: unknown[]) => void) => void;
   removeListener?: (e: string, f: (...a: unknown[]) => void) => void;
 };
+export type { Eth };
+let active: Eth | null = null;
+/** Selects the EIP-6963 provider the user picked in the connect dialog. */
+export const setActiveProvider = (p: Eth | null) => {
+  active = p;
+};
 export const injected = (): Eth | null =>
   typeof window === "undefined"
     ? null
-    : ((window as unknown as { ethereum?: Eth }).ethereum ?? null);
+    : (active ?? (window as unknown as { ethereum?: Eth }).ethereum ?? null);
 
 export const publicClient = () => createPublicClient({ chain: litvm, transport: http() });
 
