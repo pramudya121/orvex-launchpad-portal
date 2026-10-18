@@ -5,6 +5,7 @@ import {
   antiBotAbi,
   bondingCurveAbi,
   factoryAbi,
+  feeManagerAbi,
   launchTokenAbi,
   referralAbi,
   routerAbi,
@@ -316,6 +317,87 @@ export async function registerReferral(account: Address, referrer: Address) {
     }),
   );
 }
+
+// ---------------- FeeManager (admin) ----------------
+
+export type FeeManagerState = {
+  owner: Address;
+  treasury: Address;
+  team: Address;
+  marketing: Address;
+  treasuryShare: number;
+  teamShare: number;
+  marketingShare: number;
+  paused: boolean;
+  balance: bigint;
+};
+
+export async function feeManagerState(): Promise<FeeManagerState> {
+  const pc = publicClient();
+  const [owner, treasury, team, marketing, tShare, teamShare, mShare, paused, balance] =
+    await Promise.all([
+      pc.readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "owner" }),
+      pc.readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "treasury" }),
+      pc.readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "teamWallet" }),
+      pc.readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "marketingWallet" }),
+      pc.readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "treasuryShare" }),
+      pc.readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "teamShare" }),
+      pc.readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "marketingShare" }),
+      pc.readContract({ address: CONTRACTS.feeManager, abi: feeManagerAbi, functionName: "paused" }),
+      pc.getBalance({ address: CONTRACTS.feeManager }),
+    ]);
+  return {
+    owner: owner as Address,
+    treasury: treasury as Address,
+    team: team as Address,
+    marketing: marketing as Address,
+    treasuryShare: Number(tShare),
+    teamShare: Number(teamShare),
+    marketingShare: Number(mShare),
+    paused: paused as boolean,
+    balance,
+  };
+}
+
+export async function isAuthorizedCollector(account: Address) {
+  return (await publicClient().readContract({
+    address: CONTRACTS.feeManager,
+    abi: feeManagerAbi,
+    functionName: "isAuthorizedCollector",
+    args: [account],
+  })) as boolean;
+}
+
+async function feeManagerWrite(
+  account: Address,
+  functionName: "setWallets" | "setShares" | "setCollector" | "pause" | "unpause" | "distributeETH" | "distributeToken" | "emergencyWithdrawETH" | "emergencyWithdrawToken",
+  args: readonly unknown[] = [],
+) {
+  const w = await walletClient(account);
+  return confirm(
+    await w.writeContract({
+      address: CONTRACTS.feeManager,
+      abi: feeManagerAbi,
+      functionName,
+      args,
+    } as never),
+  );
+}
+
+export const feeManagerSetWallets = (account: Address, treasury: Address, team: Address, marketing: Address) =>
+  feeManagerWrite(account, "setWallets", [treasury, team, marketing]);
+export const feeManagerSetShares = (account: Address, treasury: bigint, team: bigint, marketing: bigint) =>
+  feeManagerWrite(account, "setShares", [treasury, team, marketing]);
+export const feeManagerSetCollector = (account: Address, collector: Address, status: boolean) =>
+  feeManagerWrite(account, "setCollector", [collector, status]);
+export const feeManagerPause = (account: Address) => feeManagerWrite(account, "pause");
+export const feeManagerUnpause = (account: Address) => feeManagerWrite(account, "unpause");
+export const feeManagerDistributeETH = (account: Address) => feeManagerWrite(account, "distributeETH");
+export const feeManagerDistributeToken = (account: Address, token: Address) =>
+  feeManagerWrite(account, "distributeToken", [token]);
+export const feeManagerEmergencyETH = (account: Address) => feeManagerWrite(account, "emergencyWithdrawETH");
+export const feeManagerEmergencyToken = (account: Address, token: Address) =>
+  feeManagerWrite(account, "emergencyWithdrawToken", [token]);
 
 /** Short, user-readable message from a wallet/contract error. */
 export function walletError(e: unknown) {
