@@ -6,7 +6,7 @@ import { getTokens, fmtUsd, fmtAge, type Token } from "@/lib/tokens";
 import { TokenCard } from "@/components/orvex/TokenCard";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
 import { Change } from "@/components/orvex/Change";
-import { cn } from "@/lib/utils";
+import { Chip } from "@/components/orvex/Chip";
 
 export const Route = createFileRoute("/explore")({
   head: () => ({
@@ -91,6 +91,3 @@ function Explore() {
   );
 }
 
-export function Chip({ on, className, ...p }: React.ButtonHTMLAttributes<HTMLButtonElement> & { on?: boolean }) {
-  return <button {...p} className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm transition", on ? "border-primary-glow/40 bg-primary/25 text-foreground" : "border-border text-muted-foreground hover:text-foreground", className)} />;
-}

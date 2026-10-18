@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { getTokens, fmtUsd, type Token } from "@/lib/tokens";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
 import { Change } from "@/components/orvex/Change";
-import { Chip } from "./explore";
+import { Chip } from "@/components/orvex/Chip";
 
 export const Route = createFileRoute("/trending")({
   head: () => ({
