@@ -1,8 +1,8 @@
 # ORVEX improvements
 
-- [ ] Add Explore Window All/24H/7D with matching real statistics.
-- [ ] Save the supplied ITACHI logo and verify it displays.
-- [ ] Add subtle motion to Home and refine DEX pool presentation; verify interactions and layouts.
+- [x] Add Explore Window All/24H/7D with matching real statistics and window sorting tests.
+- [x] Save the supplied ITACHI logo and verify it displays on cards and token details.
+- [x] Add subtle reduced-motion-aware Home animations and refine DEX pools; verify search, pool selection, live reserves and mobile layouts.
 
 - [x] Restrict Admin content and navigation to the connected FeeManager owner; test owner/non-owner eligibility and disconnected direct access.
 - [x] Refresh Trending, Leaderboard and Portfolio; verify 24H/7D, ranking tabs/search, public portfolio balances and activity, and mobile layouts.
