@@ -35,12 +35,14 @@ import {
 } from "@/lib/web3/actions";
 import { short } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
+import { useOwnerAccess } from "@/components/orvex/useOwnerAccess";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex, nofollow" },
       { title: "Admin — ORVEX" },
       { name: "description", content: "FeeManager administration for the ORVEX launchpad." },
       { property: "og:title", content: "Admin — ORVEX" },
@@ -58,6 +60,21 @@ const stateQuery = () => ({
 
 function Admin() {
   const { address, open } = useWallet();
+  const access = useOwnerAccess();
+  if (!address || (!access.isPending && !access.isOwner)) return (
+    <div className="mx-auto max-w-md border-y border-border py-16 text-center">
+      <ShieldCheck className="mx-auto size-10 text-muted-foreground" />
+      <h1 className="mt-5 text-2xl font-bold">Private access</h1>
+      <p className="mt-3 text-sm text-muted-foreground">Only the connected FeeManager owner can access this page.</p>
+      {!address ? <Button className="mt-6" onClick={open}><Wallet /> Connect owner wallet</Button> : access.isError ? <Button variant="outline" className="mt-6" onClick={() => access.refetch()}><RefreshCw /> Retry verification</Button> : null}
+    </div>
+  );
+  if (!access.isOwner) return <div className="grid place-items-center py-24"><Loader2 className="size-6 animate-spin text-primary" /></div>;
+  return <AdminConsole />;
+}
+
+function AdminConsole() {
+  const { address } = useWallet();
   const qc = useQueryClient();
   const { data: s, isLoading, isError, refetch } = useQuery(stateQuery());
   const [busy, setBusy] = useState<string | null>(null);
@@ -130,20 +147,6 @@ function Admin() {
         </div>
       </div>
 
-      {!address && (
-        <div className="glass rounded-2xl p-6 text-center">
-          <p className="text-sm text-muted-foreground">Connect the owner wallet to manage fees.</p>
-          <Button className="mt-4 bg-gradient-primary" onClick={open}>
-            Connect wallet
-          </Button>
-        </div>
-      )}
-      {address && !isOwner && (
-        <div className="rounded-2xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
-          Connected wallet {short(address)} is not the FeeManager owner ({short(s.owner)}). Read-only
-          mode.
-        </div>
-      )}
 
       {/* Overview */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
