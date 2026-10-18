@@ -177,7 +177,7 @@ function TokenPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
-          <PriceChart trades={trades} />
+          <PriceChart trades={trades} token={t} />
           <Tabs defaultValue="trades">
             <TabsList>
               <TabsTrigger value="trades">Trades</TabsTrigger>
@@ -263,7 +263,6 @@ function TokenPage() {
           </Tabs>
         </div>
         <div className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <CurveCard t={t} />
           <SwapPanel t={t} />
           <TokenInfoPanel t={t} trades={trades} />
         </div>
