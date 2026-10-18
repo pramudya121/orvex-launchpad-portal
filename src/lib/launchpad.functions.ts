@@ -10,7 +10,7 @@ type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
 export type TokenView = {
   id: string; address: string; name: string; symbol: string; description: string; logoUrl: string | null;
   creator: string; createdAt: string; twitter: string | null; telegram: string | null; website: string | null;
-  price: number; priceUsd: number; marketCapUsd: number; progress: number; realBase: number; graduated: boolean;
+  price: number; priceUsd: number; marketCapUsd: number; progress: number; realBase: number; graduated: boolean; onchain: boolean;
   change24h: number; volume24hUsd: number; trades24h: number; holders: number;
   reserves: Reserves;
 };
@@ -50,7 +50,7 @@ function toView(t: TokenRow, trades: TradeView[]): TokenView {
     id: t.id, address: t.address, name: t.name, symbol: t.symbol, description: t.description, logoUrl: t.logo_url,
     creator: t.creator, createdAt: t.created_at, twitter: t.twitter, telegram: t.telegram, website: t.website,
     price, priceUsd: price * CURVE.baseUsd, marketCapUsd: marketCapBase(r) * CURVE.baseUsd, progress: progress(r),
-    realBase: r.realBase, graduated: t.graduated,
+    realBase: r.realBase, graduated: t.graduated, onchain: t.onchain,
     change24h: first ? (price / first - 1) * 100 : 0,
     volume24hUsd: recent.reduce((s, x) => s + x.baseAmount, 0) * CURVE.baseUsd,
     trades24h: recent.length,
