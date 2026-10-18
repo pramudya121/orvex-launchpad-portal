@@ -140,6 +140,9 @@ function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenVie
     change24h: first ? (price / first - 1) * 100 : 0,
     volume24hUsd: (stats ? Number(stats.volume_24h) : recent.reduce((s, x) => s + x.baseAmount, 0)) * CURVE.baseUsd,
     trades24h: stats ? Number(stats.trades_24h) : recent.length,
+    change7d: first7 ? (price / first7 - 1) * 100 : 0,
+    volume7dUsd: (stats ? Number(stats.volume_7d) : 0) * CURVE.baseUsd,
+    trades7d: stats ? Number(stats.trades_7d) : 0,
     holders: stats ? Number(stats.holders) : activeHolders(trades),
     reserves: r,
   };
