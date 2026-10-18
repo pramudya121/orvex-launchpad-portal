@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWallet } from "@/components/orvex/wallet";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
@@ -73,6 +74,7 @@ const Logo = ({ t, size = 28 }: { t: DexToken; size?: number }) =>
 function Dex() {
   const { address, open } = useWallet();
   const qc = useQueryClient();
+  const [view, setView] = useState("swap");
   const [from, setFrom] = useState<DexToken>(
     DEX_TOKENS[0] ?? { symbol: "zkLTC", name: "zkLTC", address: null, logo: null, decimals: 18 },
   );
@@ -214,8 +216,14 @@ function Dex() {
         </div>
         <MarketStatus />
       </div>
-      <div className="grid min-w-0 gap-8 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)]">
-        <div className="min-w-0 border border-border bg-card h-fit rounded-lg p-5 lg:sticky lg:top-24">
+      <Tabs value={view} onValueChange={setView} className="min-w-0">
+        <TabsList aria-label="DEX navigation" className="mb-6">
+          <TabsTrigger value="swap"><ArrowDownUp className="mr-2 size-4" />Swap</TabsTrigger>
+          <TabsTrigger value="liquidity"><Droplets className="mr-2 size-4" />Liquidity</TabsTrigger>
+          <TabsTrigger value="pools"><Layers className="mr-2 size-4" />Pools</TabsTrigger>
+        </TabsList>
+        <TabsContent value="swap">
+        <div className="mx-auto max-w-md border border-border bg-card h-fit rounded-lg p-5">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Swap</h2>
             <span className="flex items-center gap-1.5 text-[10px] text-success">
@@ -327,14 +335,23 @@ function Dex() {
           </Button>
         </div>
 
+        </TabsContent>
+        <TabsContent value="liquidity">
+          <Pools positions onSelect={(a, b) => {
+            setFrom(a); setTo(b); setAmt(""); setView("swap");
+          }} />
+        </TabsContent>
+        <TabsContent value="pools">
         <Pools
           onSelect={(a, b) => {
             setFrom(a);
             setTo(b);
             setAmt("");
+            setView("swap");
           }}
         />
-      </div>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!picker} onOpenChange={(o) => !o && setPicker(null)}>
         <DialogContent className="max-w-sm bg-card">
@@ -409,10 +426,11 @@ function Side({
 }
 
 /** Live pool list read straight from the DEX factory. */
-function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
+function Pools({ onSelect, positions = false }: { onSelect: (a: DexToken, b: DexToken) => void; positions?: boolean }) {
+  const { address, open } = useWallet();
   const [search, setSearch] = useState("");
   const { data, isLoading, isError, isFetching, refetch } = useQuery({
-    queryKey: ["pools"],
+    queryKey: ["pools", positions ? address : null],
     queryFn: async () => {
       const pc = publicClient();
       const known = new Map(
@@ -446,7 +464,11 @@ function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
           ]);
           const a = known.get(t0.toLowerCase()),
             b = known.get(t1.toLowerCase());
+          const lpBalance = positions && address
+            ? await pc.readContract({ address: p, abi: launchTokenAbi, functionName: "balanceOf", args: [address] })
+            : 0n;
           return {
+            lpBalance,
             pair: p,
             a: a ?? { symbol: short(t0), name: t0, address: t0, logo: null, decimals: 18 },
             b: b ?? { symbol: short(t1), name: t1, address: t1, logo: null, decimals: 18 },
@@ -460,7 +482,7 @@ function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
     refetchInterval: 30_000,
   });
   const list = (data ?? []).filter((p) =>
-    `${p.a.symbol} ${p.b.symbol} ${p.pair}`.toLowerCase().includes(search.trim().toLowerCase()),
+    (!positions || p.lpBalance > 0n) && `${p.a.symbol} ${p.b.symbol} ${p.pair}`.toLowerCase().includes(search.trim().toLowerCase()),
   );
   const active = (data ?? []).filter((p) => p.r0 > 0 && p.r1 > 0).length;
   return (
@@ -470,7 +492,7 @@ function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
           <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase text-primary">
             <Droplets className="size-3" /> Liquidity markets
           </div>
-          <h2 className="text-xl font-semibold">Pools</h2>
+          <h2 className="text-xl font-semibold">{positions ? "Your liquidity" : "Pools"}</h2>
         </div>
         <Button
           variant="outline"
@@ -508,7 +530,13 @@ function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
           className="pl-9"
         />
       </div>
-      {isError ? (
+      {positions && !address ? (
+        <div className="border-y border-border py-12 text-center">
+          <Droplets className="mx-auto size-7 text-muted-foreground" />
+          <h3 className="mt-3 font-semibold">Your liquidity positions</h3>
+          <Button className="mt-4" onClick={open}>Connect wallet</Button>
+        </div>
+      ) : isError ? (
         <div role="alert" className="border-y border-border py-10 text-center text-sm text-danger">
           Pool data unavailable.
           <Button variant="link" onClick={() => refetch()}>
@@ -525,7 +553,7 @@ function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
         <div className="border-y border-border py-12 text-center">
           <Layers className="mx-auto size-7 text-muted-foreground" />
           <h3 className="mt-3 text-sm font-semibold">
-            {search ? "No matching pools" : "No pools yet"}
+            {search ? "No matching pools" : positions ? "No liquidity positions" : "No pools yet"}
           </h3>
           {search && (
             <Button variant="link" onClick={() => setSearch("")}>
@@ -547,6 +575,7 @@ function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
                     <h3 className="break-words text-sm font-semibold">
                       {p.a.symbol} <span className="text-muted-foreground">/</span> {p.b.symbol}
                     </h3>
+                    {positions && <p className="mt-1 font-mono text-xs text-primary">{formatUnits(p.lpBalance, 18)} LP</p>}
                     <a
                       href={explorerAddress(p.pair)}
                       target="_blank"
