@@ -215,7 +215,7 @@ function Dex() {
         <MarketStatus />
       </div>
       <div className="grid min-w-0 gap-8 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)]">
-        <div className="min-w-0 border border-border bg-card h-fit rounded-lg p-5">
+        <div className="min-w-0 border border-border bg-card h-fit rounded-lg p-5 lg:sticky lg:top-24">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Swap</h2>
             <span className="flex items-center gap-1.5 text-[10px] text-success">
@@ -534,7 +534,7 @@ function Pools({ onSelect }: { onSelect: (a: DexToken, b: DexToken) => void }) {
           )}
         </div>
       ) : (
-        <div className="divide-y divide-border border-y border-border">
+        <div className="max-h-[640px] overflow-y-auto overscroll-contain divide-y divide-border border-y border-border pr-2" tabIndex={0} aria-label="Pool list">
           {list.map((p) => (
             <div key={p.pair} className="group py-4 transition-colors hover:bg-surface/30">
               <div className="flex flex-wrap items-center justify-between gap-3">

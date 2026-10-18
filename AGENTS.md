@@ -29,3 +29,4 @@
 - lightweight-charts can't parse oklch()/CSS variables — chart colors are fixed sRGB constants in `PriceChart.tsx`.
 - Admin navigation and console share a fail-closed live FeeManager owner query; this is a presentation gate only, while the deployed contract remains the authority for privileged transactions.
 - Market pages reuse MarketHeading and MarketStats for consistent hierarchy without adding extra network requests.
+- Lifetime market windows use the RLS-respecting token_market_all_stats RPC, not a capped browser trade feed, to keep All metrics consistent across grid and table.
