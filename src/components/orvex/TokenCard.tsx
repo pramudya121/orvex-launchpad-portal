@@ -58,20 +58,6 @@ export function TokenCard({ t }: { t: TokenView }) {
           {fmtUsd(t.priceUsd)}
         </div>
         <CurveProgress value={t.progress} graduated={t.graduated} className="mt-2" />
-        <div className="mt-2 grid grid-cols-2 divide-x divide-border border-y border-border py-2 text-[9px]">
-          <div>
-            <div className="text-muted-foreground">RAISED</div>
-            <div className="mt-0.5 font-mono text-[11px] font-semibold">
-              {fmtUsd(t.realBase * CURVE.baseUsd)}
-            </div>
-          </div>
-          <div className="pl-2">
-            <div className="text-muted-foreground">VOL 24H</div>
-            <div className="mt-0.5 font-mono text-[11px] font-semibold">
-              {fmtUsd(t.volume24hUsd)}
-            </div>
-          </div>
-        </div>
         <div className="mt-2 flex justify-between gap-1 font-mono text-[9px] text-muted-foreground">
           <span>{short(t.address)}</span>
           <span className="truncate">by {short(t.creator)}</span>
