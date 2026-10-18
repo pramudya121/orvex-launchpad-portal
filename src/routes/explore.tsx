@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { LayoutGrid, List, Search, BadgeCheck } from "lucide-react";
+import { LayoutGrid, List, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { getTokens, fmtUsd, fmtAge, type Token } from "@/lib/tokens";
-import { TokenCard } from "@/components/orvex/TokenCard";
+import { fmtUsd, fmtAge } from "@/lib/tokens";
+import { tokensQuery } from "@/lib/queries";
+import type { TokenView } from "@/lib/launchpad.functions";
+import { TokenCard, TokenCardSkeleton } from "@/components/orvex/TokenCard";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
 import { Change } from "@/components/orvex/Change";
 import { Chip } from "@/components/orvex/Chip";
@@ -12,34 +15,35 @@ export const Route = createFileRoute("/explore")({
   head: () => ({
     meta: [
       { title: "Explore Tokens — ORVEX" },
-      { name: "description", content: "Browse and filter every memecoin launched on ORVEX." },
+      { name: "description", content: "Browse and filter every memecoin launched on the ORVEX bonding curve." },
       { property: "og:title", content: "Explore Tokens — ORVEX" },
       { property: "og:description", content: "Browse and filter every memecoin launched on ORVEX." },
     ],
   }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(tokensQuery()),
+  pendingComponent: () => <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }, (_, i) => <TokenCardSkeleton key={i} />)}</div>,
   component: Explore,
 });
 
-const SORTS: { k: string; label: string; fn: (a: Token, b: Token) => number }[] = [
-  { k: "new", label: "Newest", fn: (a, b) => a.ageHours - b.ageHours },
-  { k: "mc", label: "Market cap", fn: (a, b) => b.marketCap - a.marketCap },
-  { k: "vol", label: "Volume", fn: (a, b) => b.volume24h - a.volume24h },
-  { k: "liq", label: "Liquidity", fn: (a, b) => b.liquidity - a.liquidity },
-  { k: "age", label: "Oldest", fn: (a, b) => b.ageHours - a.ageHours },
+const SORTS: { k: string; label: string; fn: (a: TokenView, b: TokenView) => number }[] = [
+  { k: "new", label: "Newest", fn: (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt) },
+  { k: "mc", label: "Market cap", fn: (a, b) => b.marketCapUsd - a.marketCapUsd },
+  { k: "vol", label: "Volume", fn: (a, b) => b.volume24hUsd - a.volume24hUsd },
+  { k: "prog", label: "Curve progress", fn: (a, b) => b.progress - a.progress },
+  { k: "old", label: "Oldest", fn: (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt) },
 ];
 
 function Explore() {
+  const { data } = useSuspenseQuery(tokensQuery());
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("new");
-  const [verified, setVerified] = useState(false);
+  const [grad, setGrad] = useState(false);
   const [view, setView] = useState<"grid" | "list">("grid");
 
   const list = useMemo(() => {
     const s = SORTS.find((x) => x.k === sort)!;
-    return getTokens()
-      .filter((t) => (!verified || t.verified) && (t.name + t.symbol).toLowerCase().includes(q.toLowerCase()))
-      .sort(s.fn);
-  }, [q, sort, verified]);
+    return data.filter((t) => (!grad || t.graduated) && (t.name + t.symbol).toLowerCase().includes(q.toLowerCase())).sort(s.fn);
+  }, [data, q, sort, grad]);
 
   return (
     <div className="space-y-6">
@@ -51,7 +55,7 @@ function Explore() {
         </div>
         <div className="flex flex-wrap gap-1.5">
           {SORTS.map((s) => <Chip key={s.k} on={sort === s.k} onClick={() => setSort(s.k)}>{s.label}</Chip>)}
-          <Chip on={verified} onClick={() => setVerified(!verified)}><BadgeCheck className="size-3.5" /> Verified</Chip>
+          <Chip on={grad} onClick={() => setGrad(!grad)}>Graduated</Chip>
         </div>
         <div className="flex gap-1 md:ml-auto">
           <Chip on={view === "grid"} onClick={() => setView("grid")} aria-label="Grid view"><LayoutGrid className="size-4" /></Chip>
@@ -65,22 +69,23 @@ function Explore() {
           <p className="mt-1 text-sm text-muted-foreground">Try a different search or clear the filters.</p>
         </div>
       ) : view === "grid" ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map((t) => <TokenCard key={t.symbol} t={t} />)}</div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map((t) => <TokenCard key={t.id} t={t} />)}</div>
       ) : (
         <div className="glass overflow-x-auto rounded-2xl">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground">
-              <tr>{["Token", "Price", "24h", "MCap", "Volume", "Age"].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr>
+              <tr>{["Token", "Price", "24h", "MCap", "Volume", "Curve", "Age"].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-border">
               {list.map((t) => (
-                <tr key={t.symbol} className="transition hover:bg-surface/50">
-                  <td className="px-4 py-3"><Link to="/token/$symbol" params={{ symbol: t.symbol }} className="flex items-center gap-3"><TokenLogo symbol={t.symbol} hue={t.hue} size={28} /><span className="font-medium">{t.name}</span><span className="text-muted-foreground">{t.symbol}</span></Link></td>
-                  <td className="px-4 py-3 font-mono">{fmtUsd(t.price)}</td>
+                <tr key={t.id} className="transition hover:bg-surface/50">
+                  <td className="px-4 py-3"><Link to="/token/$symbol" params={{ symbol: t.symbol }} className="flex items-center gap-3"><TokenLogo symbol={t.symbol} url={t.logoUrl} size={28} /><span className="font-medium">{t.name}</span><span className="text-muted-foreground">{t.symbol}</span></Link></td>
+                  <td className="px-4 py-3 font-mono">{fmtUsd(t.priceUsd)}</td>
                   <td className="px-4 py-3"><Change v={t.change24h} /></td>
-                  <td className="px-4 py-3 font-mono">{fmtUsd(t.marketCap)}</td>
-                  <td className="px-4 py-3 font-mono">{fmtUsd(t.volume24h)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{fmtAge(t.ageHours)}</td>
+                  <td className="px-4 py-3 font-mono">{fmtUsd(t.marketCapUsd)}</td>
+                  <td className="px-4 py-3 font-mono">{fmtUsd(t.volume24hUsd)}</td>
+                  <td className="px-4 py-3 font-mono">{t.progress.toFixed(1)}%</td>
+                  <td className="px-4 py-3 text-muted-foreground">{fmtAge(t.createdAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -90,4 +95,3 @@ function Explore() {
     </div>
   );
 }
-

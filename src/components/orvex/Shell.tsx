@@ -3,7 +3,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Compass, Flame, Home, Plus, Search, Wallet, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { getTokens, short } from "@/lib/tokens";
+import { short } from "@/lib/tokens";
+import { useQuery } from "@tanstack/react-query";
+import { tokensQuery } from "@/lib/queries";
 import { useWallet } from "./wallet";
 import { TokenLogo } from "./TokenLogo";
 
@@ -19,6 +21,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const { address, open, disconnect } = useWallet();
   const [search, setSearch] = useState(false);
   const navigate = useNavigate();
+  const { data: tokens = [] } = useQuery({ ...tokensQuery(), enabled: search });
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -72,9 +75,9 @@ export function Shell({ children }: { children: ReactNode }) {
         <CommandList>
           <CommandEmpty>No tokens found.</CommandEmpty>
           <CommandGroup heading="Tokens">
-            {getTokens().map((t) => (
+            {tokens.map((t) => (
               <CommandItem key={t.symbol} value={`${t.name} ${t.symbol}`} onSelect={() => { setSearch(false); navigate({ to: "/token/$symbol", params: { symbol: t.symbol } }); }}>
-                <TokenLogo symbol={t.symbol} hue={t.hue} size={24} />
+                <TokenLogo symbol={t.symbol} url={t.logoUrl} size={24} />
                 {t.name} <span className="text-muted-foreground">${t.symbol}</span>
               </CommandItem>
             ))}

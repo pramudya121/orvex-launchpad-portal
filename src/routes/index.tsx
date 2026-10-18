@@ -1,41 +1,47 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowRight, Rocket, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getTokens, fmtUsd } from "@/lib/tokens";
-import { TokenCard } from "@/components/orvex/TokenCard";
+import { fmtUsd } from "@/lib/tokens";
+import { tokensQuery } from "@/lib/queries";
+import { CURVE } from "@/lib/curve";
+import { TokenCard, TokenCardSkeleton } from "@/components/orvex/TokenCard";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
-import { Change } from "@/components/orvex/Change";
+import { CurveProgress } from "@/components/orvex/CurveProgress";
 import { useWallet } from "@/components/orvex/wallet";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ORVEX — Launch Memecoins on LitVM" },
-      { name: "description", content: "Fair-launch memecoins on LitVM in minutes. Discover trending tokens and trade live." },
+      { title: "ORVEX — Bonding Curve Memecoin Launchpad on LitVM" },
+      { name: "description", content: "Fair-launch memecoins on a bonding curve on LitVM. No presale, no team allocation." },
       { property: "og:title", content: "ORVEX — Launch Memecoins on LitVM" },
-      { property: "og:description", content: "Fair-launch memecoins on LitVM in minutes." },
+      { property: "og:description", content: "Fair-launch memecoins on a bonding curve on LitVM." },
     ],
   }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(tokensQuery()),
+  pendingComponent: () => <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }, (_, i) => <TokenCardSkeleton key={i} />)}</div>,
   component: Index,
 });
 
 function Index() {
-  const tokens = getTokens();
-  const newest = [...tokens].sort((a, b) => a.ageHours - b.ageHours).slice(0, 6);
-  const trending = [...tokens].sort((a, b) => b.change24h - a.change24h).slice(0, 5);
+  const { data: tokens } = useSuspenseQuery(tokensQuery());
+  const newest = tokens.slice(0, 6);
+  const koth = [...tokens].filter((t) => !t.graduated).sort((a, b) => b.progress - a.progress).slice(0, 5);
   const { address, open } = useWallet();
-  const totalVol = tokens.reduce((s, t) => s + t.volume24h, 0);
 
   return (
     <div className="space-y-16">
       <section className="relative -mx-4 -mt-8 overflow-hidden px-4 pb-6 pt-20 text-center bg-hero">
         <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-surface/50 px-3 py-1 text-xs text-muted-foreground">
-          <Sparkles className="size-3.5 text-primary-glow" /> Now live on LitVM testnet
+          <Sparkles className="size-3.5 text-primary-glow" /> Fair launch · bonding curve · LitVM
         </div>
         <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
           <span className="text-gradient">Digital silver</span> for your next memecoin.
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-muted-foreground">Launch a token in under a minute. Fair, fast and secured by Litecoin-grade infrastructure.</p>
+        <p className="mx-auto mt-5 max-w-xl text-muted-foreground">
+          Every token starts on the same bonding curve. When {(CURVE.curveSupply / 1e6).toFixed(0)}M tokens are bought, liquidity graduates to the DEX automatically.
+        </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Button asChild size="lg" className="bg-gradient-primary shadow-glow"><Link to="/create"><Rocket /> Create Token</Link></Button>
           <Button asChild size="lg" variant="secondary"><Link to="/explore">Explore <ArrowRight /></Link></Button>
@@ -45,10 +51,10 @@ function Index() {
 
       <section className="glass grid grid-cols-2 gap-px overflow-hidden rounded-2xl md:grid-cols-4">
         {[
-          ["Tokens launched", tokens.length * 214 + ""],
-          ["24h volume", fmtUsd(totalVol)],
-          ["Traders", "48.2K"],
-          ["Liquidity locked", fmtUsd(tokens.reduce((s, t) => s + t.liquidity, 0))],
+          ["Tokens launched", String(tokens.length)],
+          ["24h volume", fmtUsd(tokens.reduce((s, t) => s + t.volume24hUsd, 0))],
+          ["zkLTC on curves", tokens.reduce((s, t) => s + t.realBase, 0).toFixed(2)],
+          ["Graduated", String(tokens.filter((t) => t.graduated).length)],
         ].map(([l, v]) => (
           <div key={l} className="bg-card/40 p-5">
             <div className="text-xs text-muted-foreground">{l}</div>
@@ -60,17 +66,23 @@ function Index() {
       <section className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Heading title="Newest launches" to="/explore" />
-          <div className="grid gap-4 sm:grid-cols-2">{newest.map((t) => <TokenCard key={t.symbol} t={t} />)}</div>
+          {newest.length ? (
+            <div className="grid gap-4 sm:grid-cols-2">{newest.map((t) => <TokenCard key={t.id} t={t} />)}</div>
+          ) : (
+            <div className="glass rounded-2xl p-12 text-center text-muted-foreground">No tokens yet. <Link to="/create" className="text-primary-glow">Launch the first one</Link>.</div>
+          )}
         </div>
         <div>
-          <Heading title="Trending" to="/trending" />
+          <Heading title="Closest to graduation" to="/trending" />
           <div className="glass divide-y divide-border rounded-2xl">
-            {trending.map((t, i) => (
-              <Link key={t.symbol} to="/token/$symbol" params={{ symbol: t.symbol }} className="flex items-center gap-3 p-4 transition hover:bg-surface/50">
-                <span className="w-4 font-mono text-xs text-muted-foreground">{i + 1}</span>
-                <TokenLogo symbol={t.symbol} hue={t.hue} size={32} />
-                <div className="flex-1"><div className="text-sm font-semibold">{t.symbol}</div><div className="text-xs text-muted-foreground">{fmtUsd(t.marketCap)}</div></div>
-                <Change v={t.change24h} />
+            {koth.map((t, i) => (
+              <Link key={t.id} to="/token/$symbol" params={{ symbol: t.symbol }} className="block p-4 transition hover:bg-surface/50">
+                <div className="flex items-center gap-3">
+                  <span className="w-4 font-mono text-xs text-muted-foreground">{i + 1}</span>
+                  <TokenLogo symbol={t.symbol} url={t.logoUrl} size={32} />
+                  <div className="flex-1"><div className="text-sm font-semibold">{t.symbol}</div><div className="text-xs text-muted-foreground">{fmtUsd(t.marketCapUsd)}</div></div>
+                </div>
+                <CurveProgress value={t.progress} className="ml-7 mt-2" />
               </Link>
             ))}
           </div>
