@@ -43,7 +43,7 @@ function Create() {
     setConfirm(false);
     const stages = ["Uploading logo", "Deploying contract", "Adding liquidity", "Saving metadata"];
     for (let i = 0; i < stages.length; i++) {
-      setDeploy({ p: (i / stages.length) * 100, label: stages[i] });
+      setDeploy({ p: (i / stages.length) * 100, label: stages[i]! });
       await new Promise((r) => setTimeout(r, 900));
     }
     setDeploy({ p: 100, label: "Done" });

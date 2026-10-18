@@ -40,7 +40,7 @@ export function PriceChart({ token }: { token: Token }) {
     chart.timeScale().fitContent();
 
     // simulated live ticks
-    let last = { ...data[data.length - 1] };
+    let last = { ...data[data.length - 1]! };
     const id = setInterval(() => {
       const close = Math.max(last.close * (1 + (Math.random() - 0.5) * 0.01), 1e-8);
       last = { ...last, close, high: Math.max(last.high, close), low: Math.min(last.low, close) };
