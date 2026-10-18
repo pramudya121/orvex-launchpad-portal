@@ -28,6 +28,7 @@ import { useWallet } from "./wallet";
 import { supabase } from "@/integrations/supabase/client";
 import { TokenLogo } from "./TokenLogo";
 import orvexLogo from "@/assets/orvex-logo.jpg.asset.json";
+import { useOwnerAccess } from "./useOwnerAccess";
 
 const NAV = [
   { to: "/", label: "Home", icon: Home },
@@ -42,6 +43,8 @@ const NAV = [
 
 export function Shell({ children }: { children: ReactNode }) {
   const { address, open, disconnect } = useWallet();
+  const { isOwner } = useOwnerAccess();
+  const visibleNav = NAV.filter((item) => item.to !== "/admin" || isOwner);
   const [search, setSearch] = useState(false);
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -86,7 +89,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <img src={orvexLogo.url} alt="ORVEX" className="h-full w-full object-contain" />
           </Link>
           <nav className="ml-4 hidden items-center gap-1 lg:flex">
-            {NAV.slice(1).map((n) => (
+            {visibleNav.slice(1).map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
@@ -128,8 +131,10 @@ export function Shell({ children }: { children: ReactNode }) {
         © 2026 ORVEX · Memecoin launchpad on LitVM
       </footer>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-8 border-t border-border bg-background/90 backdrop-blur-xl lg:hidden">
-        {NAV.map((n) => (
+      <nav
+        className={`fixed inset-x-0 bottom-0 z-40 grid ${isOwner ? "grid-cols-8" : "grid-cols-7"} border-t border-border bg-background/90 backdrop-blur-xl lg:hidden`}
+      >
+        {visibleNav.map((n) => (
           <Link
             key={n.to}
             to={n.to}

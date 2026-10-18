@@ -27,3 +27,5 @@
 - Market counts, 24-hour volume and curve-trade holder estimates use the RLS-respecting token_market_stats database function, so a globally capped trade feed cannot silently change token metrics.
 - Supplied deployed contract addresses and ABIs are authoritative; do not describe absent local contract sources as audited or regenerate the deployed ABI from unrelated custom contracts.
 - lightweight-charts can't parse oklch()/CSS variables — chart colors are fixed sRGB constants in `PriceChart.tsx`.
+- Admin navigation and console share a fail-closed live FeeManager owner query; this is a presentation gate only, while the deployed contract remains the authority for privileged transactions.
+- Market pages reuse MarketHeading and MarketStats for consistent hierarchy without adding extra network requests.
