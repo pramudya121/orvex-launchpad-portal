@@ -4,6 +4,8 @@ import type { Address } from "viem";
 import { useQuery } from "@tanstack/react-query";
 import { formatEther } from "viem";
 import { uploadLogo, indexTx } from "@/lib/launchpad.functions";
+import { quoteBuy, type Reserves } from "@/lib/curve";
+import { MarketStatus } from "@/components/orvex/MarketStatus";
 import { buyOnchain, createOnchain, creationFee, walletError } from "@/lib/web3/actions";
 import { CONTRACTS, explorerTx } from "@/lib/web3/chain";
 import { publicClient } from "@/lib/web3/client";
@@ -57,14 +59,15 @@ function Create() {
   const [confirm, setConfirm] = useState(false);
   const [deploy, setDeploy] = useState<{ p: number; label: string } | null>(null);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
-  const { data: fee } = useQuery({ queryKey: ["creationFee"], queryFn: async () => Number(formatEther(await creationFee())), staleTime: 60_000 });
+  const { data: fee, isError: feeError, refetch: retryFee } = useQuery({ queryKey: ["creationFee"], queryFn: async () => Number(formatEther(await creationFee())), staleTime: 60_000, refetchInterval: 60_000 });
 
-  const devBuy = Math.max(0, Number(f.devBuy) || 0);
-  const valid = step !== 0 || (f.name.trim() && /^[A-Z0-9]{1,10}$/.test(f.symbol.trim()));
+  const devBuy = Number(f.devBuy);
+  const devBuyValid = Number.isFinite(devBuy) && devBuy >= 0;
+  const valid = (step !== 0 || (f.name.trim() && /^[A-Z0-9]{1,10}$/.test(f.symbol.trim()))) && (step !== 1 || devBuyValid);
 
   const run = async () => {
     setConfirm(false);
-    if (!address) return;
+    if (!address || fee === undefined || !devBuyValid || deploy) return;
     const symbol = f.symbol.trim().toUpperCase();
     try {
       if (logoFile && logoFile.size > 2 * 1024 * 1024) { toast.error("Logo must be under 2MB"); return; }
@@ -79,16 +82,23 @@ function Create() {
       const { hash, curve } = await createOnchain(address, { name: f.name.trim(), symbol });
       setDeploy({ p: 65, label: "Indexing your token" });
       const r = await doIndex({ data: { txHash: hash, meta: { description: f.description, twitter: f.twitter || undefined, telegram: f.telegram || undefined, website: f.website || undefined, logo: logoUrl } } });
-      if ("error" in r) toast.warning(r.error);
+      if ("error" in r) { toast.warning("Launch confirmed; market indexing needs retry", { description: r.error }); return; }
       toast.success(`${symbol} is live on LitVM`, { action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") } });
 
       if (devBuy > 0) {
         setDeploy({ p: 80, label: "Confirm your dev buy" });
         try {
-          const [vToken, vEth] = (await publicClient().readContract({ address: curve, abi: bondingCurveAbi, functionName: "getReserves" })) as readonly bigint[];
-          const net = devBuy * 0.98;
-          const expected = (net * Number(formatEther(vToken!))) / (Number(formatEther(vEth!)) + net);
-          const bh = await buyOnchain(address, curve, devBuy, expected * 0.9);
+          const pc = publicClient();
+          const [reserves, sale, total, protocolFee, creatorFee] = await Promise.all([
+            pc.readContract({address:curve,abi:bondingCurveAbi,functionName:"getReserves"}),
+            pc.readContract({address:curve,abi:bondingCurveAbi,functionName:"TOKENS_FOR_SALE"}),
+            pc.readContract({address:curve,abi:bondingCurveAbi,functionName:"TOTAL_SUPPLY"}),
+            pc.readContract({address:curve,abi:bondingCurveAbi,functionName:"protocolFeeBps"}),
+            pc.readContract({address:curve,abi:bondingCurveAbi,functionName:"creatorFeeBps"}),
+          ]);
+          const [vToken,vEth,rToken,rEth] = reserves;
+          const r: Reserves = {virtualToken:Number(formatEther(vToken)),virtualBase:Number(formatEther(vEth)),realBase:Number(formatEther(rEth)),tokensSold:Number(formatEther(sale-rToken)),saleSupply:Number(formatEther(sale)),totalSupply:Number(formatEther(total)),feeBps:Number(protocolFee+creatorFee)};
+          const bh = await buyOnchain(address, curve, devBuy, quoteBuy(r,devBuy).tokenAmount);
           await doIndex({ data: { txHash: bh } });
           toast.success(`Dev buy of ${devBuy} zkLTC done`);
         } catch (e) {
@@ -107,7 +117,7 @@ function Create() {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create token</h1>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3"><div><div className="mb-2 text-[10px] uppercase tracking-widest text-primary">Launch studio · Testnet</div><h1 className="text-3xl font-bold">Create token</h1></div><MarketStatus/></div>
         <ol className="mt-6 flex gap-2">
           {STEPS.map((s, i) => (
             <li key={s} className="flex-1">
@@ -117,7 +127,7 @@ function Create() {
           ))}
         </ol>
 
-        <div className="glass mt-6 space-y-5 rounded-2xl p-6">
+        <div className="mt-6 space-y-5 border-t border-border py-6">
           {step === 0 && (
             <>
               <Field label="Token name"><Input value={f.name} onChange={(e) => set("name")(e.target.value)} placeholder="Silver Doge" maxLength={32} /></Field>
@@ -127,14 +137,16 @@ function Create() {
                 <label className="flex cursor-pointer items-center gap-4 rounded-xl border border-dashed border-border p-4 transition hover:border-primary-glow/50">
                   {logo ? <img src={logo} alt="" className="size-12 rounded-full object-cover" /> : <div className="grid size-12 place-items-center rounded-full bg-surface"><Upload className="size-5 text-muted-foreground" /></div>}
                   <span className="text-sm text-muted-foreground">PNG or JPG, up to 2MB</span>
-                  <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const file = e.target.files?.[0]; if (file) { setLogo(URL.createObjectURL(file)); setLogoFile(file); } }} />
+                  <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={(e) => { const file = e.target.files?.[0]; if (file) { if (file.size > 2 * 1024 * 1024 || !["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)) { toast.error("Choose PNG, JPEG, WebP or GIF under 2MB"); e.target.value=""; return; } if (logo) URL.revokeObjectURL(logo); setLogo(URL.createObjectURL(file)); setLogoFile(file); } }} />
                 </label>
               </Field>
             </>
           )}
           {step === 1 && (
             <div className="space-y-5">
+              {feeError && <div role="alert" className="text-sm text-danger">Launch fee unavailable. <Button variant="link" onClick={() => retryFee()}>Retry</Button></div>}
               <Field label="Dev buy (zkLTC, optional)"><Input type="number" min="0" step="0.1" value={f.devBuy} onChange={(e) => set("devBuy")(e.target.value)} /></Field>
+              {!devBuyValid && <p role="alert" className="text-xs text-danger">Enter a valid non-negative amount.</p>}
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 {[["Launch fee", fee === undefined ? "…" : `${fee} zkLTC`], ["Factory", `${CONTRACTS.factory.slice(0, 8)}…`], ["Fees go to", "FeeManager (treasury · team · marketing)"], ["After the curve", "Liquidity moves to the ORVEX DEX"]].map(([k, v]) => (
                   <div key={k} className="rounded-lg bg-surface/60 p-3"><div className="text-xs text-muted-foreground">{k}</div><div className="mt-0.5 font-mono text-xs">{v}</div></div>
@@ -170,7 +182,7 @@ function Create() {
             {step < 3 ? (
               <Button disabled={!valid} onClick={() => setStep(step + 1)} className="bg-gradient-primary">Continue</Button>
             ) : (
-              <Button disabled={!!deploy} onClick={() => (address ? setConfirm(true) : open())} className="bg-gradient-primary shadow-glow">{address ? "Deploy token" : "Connect wallet to deploy"}</Button>
+              <Button disabled={!!deploy || fee === undefined || !devBuyValid} onClick={() => (address ? setConfirm(true) : open())} className="bg-gradient-primary shadow-glow">{address ? "Deploy token" : "Connect wallet to deploy"}</Button>
             )}
           </div>
         </div>
@@ -178,12 +190,12 @@ function Create() {
 
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <div className="text-xs uppercase tracking-wider text-muted-foreground">Live preview</div>
-        <div className="glass mt-3 rounded-2xl p-5">
+        <div className="glass mt-3 rounded-lg p-5">
           <div className="flex items-center gap-3">
             {logo ? <img src={logo} alt="" className="size-12 rounded-full object-cover" /> : <TokenLogo symbol={f.symbol || "??"} size={48} />}
-            <div><div className="font-semibold">{f.name || "Token name"}</div><div className="text-xs text-muted-foreground">${f.symbol || "SYMBOL"}</div></div>
+            <div className="min-w-0"><div className="break-words font-semibold">{f.name || "Token name"}</div><div className="text-xs text-muted-foreground">${f.symbol || "SYMBOL"}</div></div>
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">{f.description || "Your description appears here."}</p>
+          <p className="mt-4 break-words text-sm text-muted-foreground">{f.description || "Your description appears here."}</p>
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
             <div className="rounded-lg bg-surface/60 p-2">Network<div className="font-mono">LiteForge</div></div>
             <div className="rounded-lg bg-surface/60 p-2">Launch fee<div className="font-mono">{fee ?? "…"} zkLTC</div></div>
