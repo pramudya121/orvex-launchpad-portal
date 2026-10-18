@@ -171,3 +171,64 @@ export function RankCard({
 }
 
 export const pct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+
+/** Aggregate price change and volume across the 1h / 6h / 24h / 7d windows. */
+export function WindowChart({
+  tokens,
+  win,
+  setWin,
+  change,
+  volume,
+}: {
+  tokens: TokenView[];
+  win: RankWindow;
+  setWin: (w: RankWindow) => void;
+  change: (t: TokenView, w: RankWindow) => number;
+  volume: (t: TokenView, w: RankWindow) => number;
+}) {
+  const rows = RANK_WINDOWS.map((w) => {
+    const vol = tokens.reduce((s, t) => s + volume(t, w), 0);
+    const active = tokens.filter((t) => volume(t, w) > 0);
+    const weighted = vol > 0 ? active.reduce((s, t) => s + change(t, w) * volume(t, w), 0) / vol : 0;
+    return { w, vol, chg: weighted, active: active.length };
+  });
+  const maxVol = Math.max(1e-12, ...rows.map((r) => r.vol));
+  const maxChg = Math.max(1, ...rows.map((r) => Math.abs(r.chg)));
+  return (
+    <section className="grid gap-4 rounded-xl border border-border bg-card/70 p-5 md:grid-cols-2">
+      {(["vol", "chg"] as const).map((kind) => (
+        <div key={kind}>
+          <p className="mb-3 text-xs font-bold">
+            {kind === "vol" ? "Volume by window" : "Volume-weighted price change"}
+          </p>
+          <div className="flex h-36 items-end gap-3">
+            {rows.map((r) => {
+              const v = kind === "vol" ? r.vol : r.chg;
+              const h = kind === "vol" ? (r.vol / maxVol) * 100 : (Math.abs(r.chg) / maxChg) * 100;
+              const tone = kind === "vol" ? "bg-primary" : r.chg >= 0 ? "bg-success" : "bg-danger";
+              return (
+                <button
+                  key={r.w}
+                  onClick={() => setWin(r.w)}
+                  aria-pressed={win === r.w}
+                  className="group flex h-full flex-1 flex-col items-center justify-end gap-1.5"
+                >
+                  <span className={cn("font-mono text-[10px] font-bold", kind === "chg" && (r.chg >= 0 ? "text-success" : "text-danger"))}>
+                    {kind === "vol" ? fmtUsd(v) : pct(v)}
+                  </span>
+                  <span
+                    className={cn("w-full rounded-t-md transition-all", tone, win === r.w ? "opacity-100" : "opacity-40 group-hover:opacity-70")}
+                    style={{ height: `${Math.max(3, h * 0.75)}%` }}
+                  />
+                  <span className={cn("text-[11px] font-bold", win === r.w ? "text-foreground" : "text-muted-foreground")}>
+                    {r.w}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
