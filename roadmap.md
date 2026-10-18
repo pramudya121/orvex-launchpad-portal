@@ -1,5 +1,8 @@
 # ORVEX improvements
 
+- [ ] Harden unfinished transaction recovery and indexing concurrency; validate targeted regression tests.
+- [ ] Run available security/dependency scans and fix actionable findings.
+
 - [x] Use uploaded ORVEX logo in the website header and favicon.
 - [x] Add launch/trade block provenance, genesis-free first scans, explicit database error handling and database market aggregates; verify public RPC and 15 tests.
 
