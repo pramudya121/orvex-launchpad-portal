@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      chain_sync: {
+        Row: {
+          id: string
+          last_block: number
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          last_block?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          last_block?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       token_trades: {
         Row: {
           base_amount: number
@@ -63,16 +81,23 @@ export type Database = {
           address: string
           created_at: string
           creator: string
+          curve_address: string | null
           description: string
+          fee_bps: number
           graduated: boolean
           id: string
           logo_url: string | null
+          max_buy: number | null
           name: string
           onchain: boolean
+          pair_address: string | null
           real_base: number
+          sale_supply: number
           symbol: string
+          synced_block: number
           telegram: string | null
           tokens_sold: number
+          total_supply: number
           twitter: string | null
           virtual_base: number
           virtual_token: number
@@ -82,16 +107,23 @@ export type Database = {
           address: string
           created_at?: string
           creator: string
+          curve_address?: string | null
           description?: string
+          fee_bps?: number
           graduated?: boolean
           id?: string
           logo_url?: string | null
+          max_buy?: number | null
           name: string
           onchain?: boolean
+          pair_address?: string | null
           real_base?: number
+          sale_supply?: number
           symbol: string
+          synced_block?: number
           telegram?: string | null
           tokens_sold?: number
+          total_supply?: number
           twitter?: string | null
           virtual_base?: number
           virtual_token?: number
@@ -101,16 +133,23 @@ export type Database = {
           address?: string
           created_at?: string
           creator?: string
+          curve_address?: string | null
           description?: string
+          fee_bps?: number
           graduated?: boolean
           id?: string
           logo_url?: string | null
+          max_buy?: number | null
           name?: string
           onchain?: boolean
+          pair_address?: string | null
           real_base?: number
+          sale_supply?: number
           symbol?: string
+          synced_block?: number
           telegram?: string | null
           tokens_sold?: number
+          total_supply?: number
           twitter?: string | null
           virtual_base?: number
           virtual_token?: number

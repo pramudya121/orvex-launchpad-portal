@@ -1,0 +1,10 @@
+ALTER TABLE public.tokens ADD COLUMN IF NOT EXISTS curve_address text;
+ALTER TABLE public.tokens ADD COLUMN IF NOT EXISTS total_supply numeric NOT NULL DEFAULT 1000000000;
+ALTER TABLE public.tokens ADD COLUMN IF NOT EXISTS sale_supply numeric NOT NULL DEFAULT 800000000;
+ALTER TABLE public.tokens ADD COLUMN IF NOT EXISTS pair_address text;
+ALTER TABLE public.tokens ADD COLUMN IF NOT EXISTS synced_block bigint NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS public.chain_sync (id text PRIMARY KEY, last_block bigint NOT NULL DEFAULT 0, updated_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT ON public.chain_sync TO anon, authenticated;
+GRANT ALL ON public.chain_sync TO service_role;
+ALTER TABLE public.chain_sync ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Sync state is public" ON public.chain_sync FOR SELECT TO anon, authenticated USING (true);

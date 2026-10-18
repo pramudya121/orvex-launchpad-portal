@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { Address } from "viem";
-import { createToken, uploadLogo, indexTx } from "@/lib/launchpad.functions";
-import { CURVE, initialReserves, quoteBuy, spotPrice } from "@/lib/curve";
-import { fmtNum, fmtUsd } from "@/lib/tokens";
-import { createOnchain, walletError } from "@/lib/web3/actions";
-import { explorerTx } from "@/lib/web3/chain";
+import { useQuery } from "@tanstack/react-query";
+import { formatEther } from "viem";
+import { uploadLogo, indexTx } from "@/lib/launchpad.functions";
+import { buyOnchain, createOnchain, creationFee, walletError } from "@/lib/web3/actions";
+import { CONTRACTS, explorerTx } from "@/lib/web3/chain";
+import { publicClient } from "@/lib/web3/client";
+import { bondingCurveAbi } from "@/lib/web3/abi";
 import { useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -42,9 +44,8 @@ const readB64 = (file: File) => new Promise<string>((res, rej) => {
 type LogoType = "image/png" | "image/jpeg" | "image/webp" | "image/gif";
 
 function Create() {
-  const { address, open, onchain } = useWallet();
+  const { address, open } = useWallet();
   const navigate = useNavigate();
-  const doCreate = useServerFn(createToken);
   const doUpload = useServerFn(uploadLogo);
   const doIndex = useServerFn(indexTx);
   const [step, setStep] = useState(0);
@@ -54,45 +55,48 @@ function Create() {
   const [confirm, setConfirm] = useState(false);
   const [deploy, setDeploy] = useState<{ p: number; label: string } | null>(null);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
+  const { data: fee } = useQuery({ queryKey: ["creationFee"], queryFn: async () => Number(formatEther(await creationFee())), staleTime: 60_000 });
 
   const devBuy = Math.max(0, Number(f.devBuy) || 0);
-  const devQuote = devBuy > 0 ? quoteBuy(initialReserves(), devBuy) : null;
   const valid = step !== 0 || (f.name.trim() && /^[A-Z0-9]{1,10}$/.test(f.symbol.trim()));
 
   const run = async () => {
     setConfirm(false);
     if (!address) return;
     const symbol = f.symbol.trim().toUpperCase();
-    const meta = { description: f.description, twitter: f.twitter || undefined, telegram: f.telegram || undefined, website: f.website || undefined };
     try {
       if (logoFile && logoFile.size > 2 * 1024 * 1024) { toast.error("Logo must be under 2MB"); return; }
-      setDeploy({ p: 15, label: "Uploading logo" });
-      const logoBase64 = logoFile ? await readB64(logoFile) : undefined;
-      const logoType = logoFile ? (logoFile.type as LogoType) : undefined;
+      let logoUrl: string | undefined;
+      if (logoFile) {
+        setDeploy({ p: 10, label: "Uploading logo" });
+        const up = await doUpload({ data: { symbol, logoBase64: await readB64(logoFile), logoType: logoFile.type as LogoType } });
+        if ("error" in up) { toast.error(up.error); return; }
+        logoUrl = up.url ?? undefined;
+      }
+      setDeploy({ p: 35, label: "Confirm the launch in your wallet" });
+      const { hash, curve } = await createOnchain(address, { name: f.name.trim(), symbol });
+      setDeploy({ p: 65, label: "Indexing your token" });
+      const r = await doIndex({ data: { txHash: hash, meta: { description: f.description, twitter: f.twitter || undefined, telegram: f.telegram || undefined, website: f.website || undefined, logo: logoUrl } } });
+      if ("error" in r) toast.warning(r.error);
+      toast.success(`${symbol} is live on LitVM`, { action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") } });
 
-      if (onchain) {
-        let uri = "";
-        if (logoBase64 && logoType) {
-          const up = await doUpload({ data: { symbol, logoBase64, logoType } });
-          if ("error" in up) { toast.error(up.error); return; }
-          uri = up.url ?? "";
+      if (devBuy > 0) {
+        setDeploy({ p: 80, label: "Confirm your dev buy" });
+        try {
+          const [vToken, vEth] = (await publicClient().readContract({ address: curve, abi: bondingCurveAbi, functionName: "getReserves" })) as readonly bigint[];
+          const net = devBuy * 0.98;
+          const expected = (net * Number(formatEther(vToken!))) / (Number(formatEther(vEth!)) + net);
+          const bh = await buyOnchain(address, curve, devBuy, expected * 0.9);
+          await doIndex({ data: { txHash: bh } });
+          toast.success(`Dev buy of ${devBuy} zkLTC done`);
+        } catch (e) {
+          toast.error(`Dev buy failed: ${walletError(e)}`);
         }
-        setDeploy({ p: 45, label: "Confirm in your wallet" });
-        const hash = await createOnchain(address as Address, { name: f.name.trim(), symbol, uri, devBuy, expectedTokens: devQuote?.tokenAmount ?? 0 });
-        setDeploy({ p: 80, label: "Indexing transaction" });
-        const r = await doIndex({ data: { txHash: hash, meta } });
-        if ("error" in r) { toast.error(r.error); return; }
-        toast.success(`${symbol} is live on LitVM`, { action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") } });
-      } else {
-        setDeploy({ p: 50, label: "Creating bonding curve" });
-        const r = await doCreate({ data: { name: f.name.trim(), symbol, ...meta, description: f.description, creator: address, logoBase64, logoType, devBuy } });
-        if ("error" in r) { toast.error(r.error); return; }
-        toast.success(`${symbol} launched`);
       }
       setDeploy({ p: 100, label: "Done" });
       navigate({ to: "/token/$symbol", params: { symbol } });
     } catch (e) {
-      toast.error(onchain ? walletError(e) : "Launch failed, please try again");
+      toast.error(walletError(e));
     } finally {
       setDeploy(null);
     }
@@ -129,13 +133,12 @@ function Create() {
           {step === 1 && (
             <div className="space-y-5">
               <Field label="Dev buy (zkLTC, optional)"><Input type="number" min="0" step="0.1" value={f.devBuy} onChange={(e) => set("devBuy")(e.target.value)} /></Field>
-              {devQuote && <p className="text-sm text-muted-foreground">You'll receive ≈ <span className="font-mono text-foreground">{fmtNum(devQuote.tokenAmount)}</span> {f.symbol || "tokens"} ({((devQuote.tokenAmount / CURVE.totalSupply) * 100).toFixed(2)}% of supply).</p>}
               <div className="grid gap-3 text-sm sm:grid-cols-2">
-                {[["Total supply", "1,000,000,000"], ["Sold on curve", "800,000,000"], ["Reserved for DEX", "200,000,000"], ["Trade fee", `${CURVE.feeRate * 100}%`]].map(([k, v]) => (
-                  <div key={k} className="rounded-lg bg-surface/60 p-3"><div className="text-xs text-muted-foreground">{k}</div><div className="mt-0.5 font-mono">{v}</div></div>
+                {[["Launch fee", fee === undefined ? "…" : `${fee} zkLTC`], ["Factory", `${CONTRACTS.factory.slice(0, 8)}…`], ["Fees go to", "FeeManager (treasury · team · marketing)"], ["After the curve", "Liquidity moves to the ORVEX DEX"]].map(([k, v]) => (
+                  <div key={k} className="rounded-lg bg-surface/60 p-3"><div className="text-xs text-muted-foreground">{k}</div><div className="mt-0.5 font-mono text-xs">{v}</div></div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">Every token launches on the same fair bonding curve. When all 800M curve tokens are sold, the token graduates and liquidity moves to a DEX.</p>
+              <p className="text-xs text-muted-foreground">Every token launches on its own fair bonding-curve contract. When the curve sells out, the token graduates and liquidity moves to the DEX. The dev buy is sent as a second transaction right after launch.</p>
             </div>
           )}
           {step === 2 && (
@@ -147,7 +150,7 @@ function Create() {
           )}
           {step === 3 && (
             <dl className="grid grid-cols-2 gap-3 text-sm">
-              {[["Name", f.name], ["Symbol", f.symbol], ["Supply", "1,000,000,000"], ["Dev buy", devBuy ? `${devBuy} zkLTC` : "None"], ["Network", onchain ? "LitVM (on-chain)" : "Demo"], ["Fee", "1% per trade"]].map(([k, v]) => (
+              {[["Name", f.name], ["Symbol", f.symbol], ["Dev buy", devBuy ? `${devBuy} zkLTC` : "None"], ["Network", "LitVM LiteForge"], ["Launch fee", fee === undefined ? "…" : `${fee} zkLTC`]].map(([k, v]) => (
                 <div key={k} className="rounded-lg bg-surface/60 p-3"><dt className="text-xs text-muted-foreground">{k}</dt><dd className="mt-0.5 font-medium">{v || "—"}</dd></div>
               ))}
             </dl>
@@ -180,8 +183,8 @@ function Create() {
           </div>
           <p className="mt-4 text-sm text-muted-foreground">{f.description || "Your description appears here."}</p>
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg bg-surface/60 p-2">Supply<div className="font-mono">1B</div></div>
-            <div className="rounded-lg bg-surface/60 p-2">Start price<div className="font-mono">{fmtUsd(spotPrice(initialReserves()) * CURVE.baseUsd)}</div></div>
+            <div className="rounded-lg bg-surface/60 p-2">Network<div className="font-mono">LiteForge</div></div>
+            <div className="rounded-lg bg-surface/60 p-2">Launch fee<div className="font-mono">{fee ?? "…"} zkLTC</div></div>
           </div>
         </div>
       </aside>
@@ -190,7 +193,7 @@ function Create() {
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>Deploy {f.symbol}?</AlertDialogTitle>
-            <AlertDialogDescription>{onchain ? `Your wallet will ask you to confirm the launch${devBuy ? ` and a ${devBuy} zkLTC dev buy` : ""} on LitVM.` : "Demo launch — no real funds are used."}</AlertDialogDescription>
+            <AlertDialogDescription>{`Your wallet will ask you to confirm the launch (${fee ?? "…"} zkLTC fee)${devBuy ? `, then a separate ${devBuy} zkLTC dev buy` : ""}.`}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
