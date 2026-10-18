@@ -36,6 +36,7 @@ const NAV = [
   { to: "/dex", label: "DEX", icon: ArrowLeftRight },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { to: "/portfolio", label: "Portfolio", icon: PieChart },
+  { to: "/admin", label: "Admin", icon: ShieldCheck },
 ] as const;
 
 export function Shell({ children }: { children: ReactNode }) {
