@@ -120,7 +120,7 @@ function Leaderboard() {
         ) : (
           <div className="grid items-end gap-4 md:grid-cols-3">
             {order.map((i) => {
-              const t = podium[i];
+              const t = podium[i]!;
               return (
                 <Link
                   key={t.id}
