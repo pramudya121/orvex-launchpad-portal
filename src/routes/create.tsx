@@ -339,7 +339,7 @@ function Create() {
                   </Button>
                 </div>
               )}
-              <Field label="Dev buy (zkLTC, optional)">
+              <Field label="Initial buy (zkLTC, optional)">
                 <Input
                   type="number"
                   min="0"
