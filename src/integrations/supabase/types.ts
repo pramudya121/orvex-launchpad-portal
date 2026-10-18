@@ -37,6 +37,7 @@ export type Database = {
           base_amount: number
           created_at: string
           id: string
+          log_index: number
           price: number
           side: string
           token_amount: number
@@ -48,6 +49,7 @@ export type Database = {
           base_amount: number
           created_at?: string
           id?: string
+          log_index?: number
           price: number
           side: string
           token_amount: number
@@ -59,6 +61,7 @@ export type Database = {
           base_amount?: number
           created_at?: string
           id?: string
+          log_index?: number
           price?: number
           side?: string
           token_amount?: number
