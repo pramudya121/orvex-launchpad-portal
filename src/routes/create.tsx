@@ -25,30 +25,71 @@ export const Route = createFileRoute("/create")({
   component: Create,
 });
 
-const STEPS = ["Basic info", "Tokenomics", "Advanced", "Preview"];
+const STEPS = ["Basic info", "Launch", "Socials", "Preview"];
+
+const readB64 = (file: File) => new Promise<string>((res, rej) => {
+  const r = new FileReader();
+  r.onload = () => res(String(r.result).split(",")[1] ?? "");
+  r.onerror = () => rej(r.error);
+  r.readAsDataURL(file);
+});
+type LogoType = "image/png" | "image/jpeg" | "image/webp" | "image/gif";
 
 function Create() {
-  const { address, open } = useWallet();
+  const { address, open, onchain } = useWallet();
+  const navigate = useNavigate();
+  const doCreate = useServerFn(createToken);
+  const doUpload = useServerFn(uploadLogo);
+  const doIndex = useServerFn(indexTx);
   const [step, setStep] = useState(0);
-  const [f, setF] = useState({ name: "", symbol: "", description: "", supply: "1000000000", decimals: "18", tax: "0", maxWallet: "2", antiBot: true, lock: true, vesting: false, twitter: "", telegram: "", website: "" });
+  const [f, setF] = useState({ name: "", symbol: "", description: "", devBuy: "0", twitter: "", telegram: "", website: "" });
   const [logo, setLogo] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [deploy, setDeploy] = useState<{ p: number; label: string } | null>(null);
-  const [done, setDone] = useState<string | null>(null);
-  const set = (k: keyof typeof f) => (v: string | boolean) => setF((s) => ({ ...s, [k]: v }));
+  const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
 
-  const valid = step !== 0 || (f.name.trim() && f.symbol.trim());
+  const devBuy = Math.max(0, Number(f.devBuy) || 0);
+  const devQuote = devBuy > 0 ? quoteBuy(initialReserves(), devBuy) : null;
+  const valid = step !== 0 || (f.name.trim() && /^[A-Z0-9]{1,10}$/.test(f.symbol.trim()));
 
   const run = async () => {
     setConfirm(false);
-    const stages = ["Uploading logo", "Deploying contract", "Adding liquidity", "Saving metadata"];
-    for (let i = 0; i < stages.length; i++) {
-      setDeploy({ p: (i / stages.length) * 100, label: stages[i]! });
-      await new Promise((r) => setTimeout(r, 900));
+    if (!address) return;
+    const symbol = f.symbol.trim().toUpperCase();
+    const meta = { description: f.description, twitter: f.twitter || undefined, telegram: f.telegram || undefined, website: f.website || undefined };
+    try {
+      if (logoFile && logoFile.size > 2 * 1024 * 1024) { toast.error("Logo must be under 2MB"); return; }
+      setDeploy({ p: 15, label: "Uploading logo" });
+      const logoBase64 = logoFile ? await readB64(logoFile) : undefined;
+      const logoType = logoFile ? (logoFile.type as LogoType) : undefined;
+
+      if (onchain) {
+        let uri = "";
+        if (logoBase64 && logoType) {
+          const up = await doUpload({ data: { symbol, logoBase64, logoType } });
+          if ("error" in up) { toast.error(up.error); return; }
+          uri = up.url ?? "";
+        }
+        setDeploy({ p: 45, label: "Confirm in your wallet" });
+        const hash = await createOnchain(address as Address, { name: f.name.trim(), symbol, uri, devBuy, expectedTokens: devQuote?.tokenAmount ?? 0 });
+        setDeploy({ p: 80, label: "Indexing transaction" });
+        const r = await doIndex({ data: { txHash: hash, meta } });
+        if ("error" in r) { toast.error(r.error); return; }
+        toast.success(`${symbol} is live on LitVM`, { action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") } });
+      } else {
+        setDeploy({ p: 50, label: "Creating bonding curve" });
+        const r = await doCreate({ data: { name: f.name.trim(), symbol, ...meta, description: f.description, creator: address, logoBase64, logoType, devBuy } });
+        if ("error" in r) { toast.error(r.error); return; }
+        toast.success(`${symbol} launched`);
+      }
+      setDeploy({ p: 100, label: "Done" });
+      navigate({ to: "/token/$symbol", params: { symbol } });
+    } catch (e) {
+      toast.error(onchain ? walletError(e) : "Launch failed, please try again");
+    } finally {
+      setDeploy(null);
     }
-    setDeploy({ p: 100, label: "Done" });
-    setDone("0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(""));
-    toast.success(`${f.symbol.toUpperCase()} deployed`);
   };
 
   if (done) {

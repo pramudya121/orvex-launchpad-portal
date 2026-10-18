@@ -74,6 +74,9 @@ function TokenPage() {
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             ${t.symbol}
             <button onClick={() => { navigator.clipboard.writeText(t.address); toast("Contract copied"); }} className="flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 font-mono text-xs hover:text-foreground">{short(t.address)} <Copy className="size-3" /></button>
+            {t.onchain
+              ? <a href={explorerAddress(t.address)} target="_blank" rel="noreferrer" className="rounded-md bg-success/15 px-2 py-0.5 text-xs text-success hover:underline">On-chain · Explorer</a>
+              : <span className="rounded-md bg-surface px-2 py-0.5 text-xs">Demo</span>}
             {t.website && <a href={t.website} target="_blank" rel="noreferrer" className="hover:text-foreground">Website</a>}
           </div>
         </div>
