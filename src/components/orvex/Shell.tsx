@@ -10,6 +10,7 @@ import {
   PieChart,
   Trophy,
   ArrowLeftRight,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ const NAV = [
   { to: "/dex", label: "DEX", icon: ArrowLeftRight },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { to: "/portfolio", label: "Portfolio", icon: PieChart },
+  { to: "/admin", label: "Admin", icon: ShieldCheck },
 ] as const;
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -126,7 +128,7 @@ export function Shell({ children }: { children: ReactNode }) {
         © 2026 ORVEX · Memecoin launchpad on LitVM
       </footer>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-border bg-background/90 backdrop-blur-xl lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-8 border-t border-border bg-background/90 backdrop-blur-xl lg:hidden">
         {NAV.map((n) => (
           <Link
             key={n.to}
