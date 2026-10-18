@@ -3,11 +3,11 @@ import type { TokenView } from "./launchpad.functions";
 export const MARKET_SORTS = ["new", "mc", "vol", "prog", "change", "old"] as const;
 export type MarketSort = (typeof MARKET_SORTS)[number];
 export const MARKET_WINDOWS = ["all", "24h", "7d"] as const;
-export type MarketWindow = (typeof MARKET_WINDOWS)[number];
+export type MarketWindow = (typeof MARKET_WINDOWS)[number] | "1h" | "6h";
 export const windowChange = (t: TokenView, w: MarketWindow) =>
-  w === "all" ? (t.changeAll ?? 0) : w === "7d" ? t.change7d : t.change24h;
+  w === "all" ? (t.changeAll ?? 0) : w === "1h" ? (t.change1h ?? 0) : w === "6h" ? (t.change6h ?? 0) : w === "7d" ? t.change7d : t.change24h;
 export const windowVolume = (t: TokenView, w: MarketWindow) =>
-  w === "all" ? (t.volumeAllUsd ?? 0) : w === "7d" ? t.volume7dUsd : t.volume24hUsd;
+  w === "all" ? (t.volumeAllUsd ?? 0) : w === "1h" ? (t.volume1hUsd ?? 0) : w === "6h" ? (t.volume6hUsd ?? 0) : w === "7d" ? t.volume7dUsd : t.volume24hUsd;
 export function filterMarket(
   tokens: TokenView[],
   search: string,

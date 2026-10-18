@@ -11,7 +11,8 @@ import { TOKEN_PAGE_SIZE } from "./pagination";
 type TokenRow = Database["public"]["Tables"]["tokens"]["Row"];
 type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
 type MarketStats = Database["public"]["Functions"]["token_market_stats"]["Returns"][number] &
-  Partial<Database["public"]["Functions"]["token_market_all_stats"]["Returns"][number]>;
+  Partial<Database["public"]["Functions"]["token_market_all_stats"]["Returns"][number]> &
+  Partial<Database["public"]["Functions"]["token_market_short_stats"]["Returns"][number]>;
 
 export type TokenView = {
   id: string;
@@ -40,6 +41,12 @@ export type TokenView = {
   change7d: number;
   volume7dUsd: number;
   trades7d: number;
+  change1h?: number;
+  volume1hUsd?: number;
+  trades1h?: number;
+  change6h?: number;
+  volume6hUsd?: number;
+  trades6h?: number;
   changeAll?: number;
   volumeAllUsd?: number;
   tradesAll?: number;
@@ -111,13 +118,15 @@ const toTrade = (r: TradeRow): TradeView => ({
 
 async function loadStats(sb: ReturnType<typeof publicClient>, ids: string[]) {
   if (!ids.length) return new Map<string, MarketStats>();
-  const [recent, lifetime] = await Promise.all([
+  const [recent, lifetime, short] = await Promise.all([
     sb.rpc("token_market_stats", { token_ids: ids }),
     sb.rpc("token_market_all_stats", { token_ids: ids }),
+    sb.rpc("token_market_short_stats", { token_ids: ids }),
   ]);
-  if (recent.error || lifetime.error) throw new Error("Market statistics could not be loaded");
+  if (recent.error || lifetime.error || short.error) throw new Error("Market statistics could not be loaded");
+  const shortMap = new Map((short.data ?? []).map((s) => [s.token_id, s]));
   const all = new Map((lifetime.data ?? []).map((s) => [s.token_id, s]));
-  return new Map((recent.data ?? []).map((s) => [s.token_id, { ...s, ...all.get(s.token_id) }]));
+  return new Map((recent.data ?? []).map((s) => [s.token_id, { ...s, ...all.get(s.token_id), ...shortMap.get(s.token_id) }]));
 }
 
 function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenView {
@@ -156,6 +165,12 @@ function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenVie
     change7d: first7 ? (price / first7 - 1) * 100 : 0,
     volume7dUsd: (stats ? Number(stats.volume_7d) : 0) * CURVE.baseUsd,
     trades7d: stats ? Number(stats.trades_7d) : 0,
+    change1h: stats?.first_price_1h ? (price / Number(stats.first_price_1h) - 1) * 100 : 0,
+    volume1hUsd: Number(stats?.volume_1h ?? 0) * CURVE.baseUsd,
+    trades1h: Number(stats?.trades_1h ?? 0),
+    change6h: stats?.first_price_6h ? (price / Number(stats.first_price_6h) - 1) * 100 : 0,
+    volume6hUsd: Number(stats?.volume_6h ?? 0) * CURVE.baseUsd,
+    trades6h: Number(stats?.trades_6h ?? 0),
     changeAll: stats?.first_price_all ? (price / Number(stats.first_price_all) - 1) * 100 : 0,
     volumeAllUsd: Number(stats?.volume_all ?? 0) * CURVE.baseUsd,
     tradesAll: Number(stats?.trades_all ?? 0),
