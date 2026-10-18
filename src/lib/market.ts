@@ -25,9 +25,9 @@ export function filterMarket(
     )
     .sort((a, b) => {
       if (sort === "mc") return b.marketCapUsd - a.marketCapUsd;
-      if (sort === "vol") return b.volume24hUsd - a.volume24hUsd;
+      if (sort === "vol") return windowVolume(b, win) - windowVolume(a, win);
       if (sort === "prog") return b.progress - a.progress;
-      if (sort === "change") return b.change24h - a.change24h;
+      if (sort === "change") return windowChange(b, win) - windowChange(a, win);
       return (sort === "old" ? 1 : -1) * (+new Date(a.createdAt) - +new Date(b.createdAt));
     });
 }
