@@ -9,7 +9,7 @@ import { fmtUsd } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 
 export type RankWindow = Exclude<MarketWindow, "all">;
-export const RANK_WINDOWS: RankWindow[] = ["24h", "7d"];
+export const RANK_WINDOWS: RankWindow[] = ["1h", "6h", "24h", "7d"];
 
 export function Medal({ i, className }: { i: number; className?: string }) {
   return (
