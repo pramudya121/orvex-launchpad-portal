@@ -1,5 +1,13 @@
-import { queryOptions } from "@tanstack/react-query";
-import { getLeaderboard, getPortfolio, getTokenDetail, listTokens } from "./launchpad.functions";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { getLeaderboard, getPortfolio, getTokenDetail, listTokens, listTokenPage } from "./launchpad.functions";
+
+export const tokenPagesQuery = (q = "", stage: "all" | "curve" | "graduated" | "favorites" = "all", favorites: string[] = []) => infiniteQueryOptions({
+  queryKey: ["tokens", "pages", q, stage, favorites],
+  initialPageParam: null as { createdAt: string; id: string } | null,
+  queryFn: ({ pageParam }) => listTokenPage({ data: { cursor: pageParam, q, stage, favorites } }),
+  getNextPageParam: (page) => page.nextCursor ?? undefined,
+  staleTime: 30_000,
+});
 
 export const tokensQuery = () =>
   queryOptions({

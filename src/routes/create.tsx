@@ -33,6 +33,7 @@ import { useWallet } from "@/components/orvex/wallet";
 import { cn } from "@/lib/utils";
 import { tokensQuery } from "@/lib/queries";
 import { supplyAllocation } from "@/lib/supply";
+import { validateLogoSize } from "@/lib/logo-upload";
 
 export const Route = createFileRoute("/create")({
   head: () => ({
@@ -146,10 +147,7 @@ function Create() {
     if (!address || fee === undefined || !devBuyValid || deploy || pendingHash) return;
     const symbol = f.symbol.trim().toUpperCase();
     try {
-      if (logoFile && logoFile.size > 2 * 1024 * 1024) {
-        toast.error("Logo must be under 2MB");
-        return;
-      }
+      if (logoFile) validateLogoSize(logoFile.size, logoFile.type);
       let logoUrl: string | undefined;
       if (logoFile) {
         setDeploy({ p: 10, label: "Uploading logo" });
@@ -305,13 +303,8 @@ function Create() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        if (
-                          file.size > 2 * 1024 * 1024 ||
-                          !["image/png", "image/jpeg", "image/webp", "image/gif"].includes(
-                            file.type,
-                          )
-                        ) {
-                          toast.error("Choose PNG, JPEG, WebP or GIF under 2MB");
+                        try { validateLogoSize(file.size, file.type); } catch (error) {
+                          toast.error(error instanceof Error ? error.message : "Invalid logo");
                           e.target.value = "";
                           return;
                         }

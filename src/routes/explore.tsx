@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { LayoutGrid, List, Search, X, Compass } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { tokensQuery } from "@/lib/queries";
+import { tokenPagesQuery } from "@/lib/queries";
 import {
   filterMarket,
   MARKET_SORTS,
@@ -53,7 +53,7 @@ export const Route = createFileRoute("/explore")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(tokensQuery()),
+  loader: ({ context }) => context.queryClient.ensureInfiniteQueryData(tokenPagesQuery()),
   pendingComponent: () => (
     <div className="token-grid">
       {Array.from({ length: 12 }, (_, i) => (
@@ -74,7 +74,6 @@ const labels = {
   old: "Oldest",
 };
 function Explore() {
-  const { data } = useSuspenseQuery(tokensQuery());
   const search = Route.useSearch();
   const s = {
     q: search.q ?? "",
@@ -85,6 +84,8 @@ function Explore() {
   };
   const navigate = Route.useNavigate();
   const { favorites } = useWatchlist();
+  const pages = useInfiniteQuery(tokenPagesQuery(s.q, s.stage as "all" | "curve" | "graduated" | "favorites", favorites));
+  const data = useMemo(() => [...new Map((pages.data?.pages.flatMap((p) => p.tokens) ?? []).map((t) => [t.id, t])).values()], [pages.data]);
   const update = (value: Partial<typeof s>) =>
     navigate({ search: (old) => ({ ...old, ...value }), replace: true });
   const list = useMemo(
@@ -197,10 +198,10 @@ function Explore() {
         </div>
       </div>
       <div className="flex justify-between text-[11px] text-muted-foreground">
-        <span>{list.length} results</span>
+        <span>{list.length} loaded results{pages.hasNextPage ? " · More available" : ""}</span>
         <span>USD estimates · zkLTC reference $85</span>
       </div>
-      {!list.length ? (
+      {pages.isPending ? <div className="token-grid">{Array.from({length: 6}, (_, i) => <TokenCardSkeleton key={i} />)}</div> : !list.length ? (
         <div className="border-y border-border py-16 text-center">
           <Compass className="mx-auto size-8 text-muted-foreground" />
           <h2 className="mt-4 font-semibold">
@@ -228,6 +229,8 @@ function Explore() {
       ) : (
         <MarketTable tokens={list} win={s.win} />
       )}
+      {pages.isError && <p role="alert" className="text-sm text-danger">Token list unavailable. <Button variant="link" onClick={() => pages.refetch()}>Retry</Button></p>}
+      {pages.hasNextPage && <div className="flex justify-center"><Button variant="outline" disabled={pages.isFetchingNextPage} onClick={() => pages.fetchNextPage()}>{pages.isFetchingNextPage ? "Loading…" : "Load more tokens"}</Button></div>}
       <p className="text-[10px] text-muted-foreground">
         Raised is curve funding, not DEX liquidity. Holder counts reflect indexed curve trades, not
         token transfers.
