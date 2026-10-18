@@ -33,6 +33,9 @@ export type TokenView = {
   change24h: number;
   volume24hUsd: number;
   trades24h: number;
+  change7d: number;
+  volume7dUsd: number;
+  trades7d: number;
   holders: number;
   reserves: Reserves;
 };
