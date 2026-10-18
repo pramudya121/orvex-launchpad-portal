@@ -29,7 +29,7 @@ export function PriceChart({ trades }: { trades: TradeView[] }) {
     });
     const v = chart.addSeries(HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" } });
     v.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-    api.current = { chart, c, v, up, down };
+    api.current = { chart, c, v };
     return () => { chart.remove(); api.current = null; };
   }, []);
 
@@ -39,7 +39,7 @@ export function PriceChart({ trades }: { trades: TradeView[] }) {
     const start = CURVE.initVirtualBase / CURVE.initVirtualToken;
     const candles = buildCandles(trades, tf, start).map((k) => ({ ...k, open: k.open * CURVE.baseUsd, high: k.high * CURVE.baseUsd, low: k.low * CURVE.baseUsd, close: k.close * CURVE.baseUsd }));
     a.c.setData(candles.map((k) => ({ ...k, time: k.time as UTCTimestamp })));
-    a.v.setData(candles.map((k) => ({ time: k.time as UTCTimestamp, value: k.volume, color: k.close >= k.open ? a.up : a.down })));
+    a.v.setData(candles.map((k) => ({ time: k.time as UTCTimestamp, value: k.volume, color: k.close >= k.open ? COLORS.up : COLORS.down })));
     a.chart.timeScale().fitContent();
   }, [trades, tf]);
 
