@@ -1,11 +1,11 @@
 {
+  "version": 1,
   "asset_id": "6976d60a-61f4-4fca-b4bb-2f30233d3b55",
-  "content_type": "image/jpeg",
-  "created_at": "2026-10-18T14:39:06Z",
-  "original_filename": "orvex-logo.jpg",
-  "project_id": "0934da22-5704-4438-a110-eec9890a58f1",
-  "r2_key": "a/v1/0934da22-5704-4438-a110-eec9890a58f1/6976d60a-61f4-4fca-b4bb-2f30233d3b55/orvex-logo.jpg",
-  "size": 21125,
+  "project_id": "6f83628a-1092-44a1-aa9d-ee0bfbbb6da8",
   "url": "/__l5e/assets-v1/6976d60a-61f4-4fca-b4bb-2f30233d3b55/orvex-logo.jpg",
-  "version": 1
+  "r2_key": "a/v1/6f83628a-1092-44a1-aa9d-ee0bfbbb6da8/6976d60a-61f4-4fca-b4bb-2f30233d3b55/orvex-logo.jpg",
+  "original_filename": "orvex-logo.jpg",
+  "size": 21125,
+  "content_type": "image/jpeg",
+  "created_at": "2026-10-18T14:39:06Z"
 }
