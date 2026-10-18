@@ -236,11 +236,11 @@ export const indexTx = createServerFn({ method: "POST" })
         const a = l.args;
         symbol = a.symbol.toUpperCase();
         const own = data.meta && a.creator.toLowerCase() === receipt.from.toLowerCase() ? data.meta : {};
-        await supabaseAdmin.from("tokens").upsert({
+        await supabaseAdmin.from("tokens").insert({
           address: a.token.toLowerCase(), name: a.name, symbol, creator: a.creator.toLowerCase(),
           logo_url: a.uri || null, description: own.description ?? "", twitter: own.twitter || null,
           telegram: own.telegram || null, website: own.website || null, onchain: true,
-        }, { onConflict: "address", ignoreDuplicates: true });
+        }); // duplicate (already indexed) is rejected by the unique index and safely ignored
       }
     }
     for (const l of logs) {
