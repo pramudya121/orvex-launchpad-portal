@@ -31,6 +31,8 @@ import {
 import { TokenLogo } from "@/components/orvex/TokenLogo";
 import { useWallet } from "@/components/orvex/wallet";
 import { cn } from "@/lib/utils";
+import { tokensQuery } from "@/lib/queries";
+import { supplyAllocation } from "@/lib/supply";
 
 export const Route = createFileRoute("/create")({
   head: () => ({
@@ -113,6 +115,24 @@ function Create() {
     queryFn: async () => Number(formatEther(await creationFee())),
     staleTime: 60_000,
     refetchInterval: 60_000,
+  });
+
+  const { data: markets = [] } = useQuery(tokensQuery());
+  const referenceCurve = markets.find((t) => t.curveAddress)?.curveAddress as Address | undefined;
+  const { data: allocation, isError: supplyError } = useQuery({
+    queryKey: ["launchSupply", referenceCurve],
+    enabled: !!referenceCurve,
+    staleTime: 300_000,
+    queryFn: async () => {
+      if (!referenceCurve) throw new Error("No deployed curve available");
+      const pc = publicClient();
+      const [total, sale, lp] = await Promise.all([
+        pc.readContract({ address: referenceCurve, abi: bondingCurveAbi, functionName: "TOTAL_SUPPLY" }),
+        pc.readContract({ address: referenceCurve, abi: bondingCurveAbi, functionName: "TOKENS_FOR_SALE" }),
+        pc.readContract({ address: referenceCurve, abi: bondingCurveAbi, functionName: "TOKENS_FOR_LP" }),
+      ]);
+      return supplyAllocation(total, sale, lp);
+    },
   });
 
   const devBuy = Number(f.devBuy);
@@ -268,30 +288,6 @@ function Create() {
         <div className="mt-6 space-y-5 border-t border-border py-6">
           {step === 0 && (
             <>
-              <Field label="Token name">
-                <Input
-                  value={f.name}
-                  onChange={(e) => set("name")(e.target.value)}
-                  placeholder="Silver Doge"
-                  maxLength={32}
-                />
-              </Field>
-              <Field label="Symbol">
-                <Input
-                  value={f.symbol}
-                  onChange={(e) => set("symbol")(e.target.value.toUpperCase())}
-                  placeholder="SDOGE"
-                  maxLength={10}
-                />
-              </Field>
-              <Field label="Description">
-                <Textarea
-                  value={f.description}
-                  onChange={(e) => set("description")(e.target.value)}
-                  placeholder="What makes it special?"
-                  maxLength={280}
-                />
-              </Field>
               <Field label="Logo">
                 <label className="flex cursor-pointer items-center gap-4 rounded-xl border border-dashed border-border p-4 transition hover:border-primary-glow/50">
                   {logo ? (
@@ -327,6 +323,31 @@ function Create() {
                   />
                 </label>
               </Field>
+              <Field label="Token name">
+                <Input
+                  value={f.name}
+                  onChange={(e) => set("name")(e.target.value)}
+                  placeholder="Silver Doge"
+                  maxLength={32}
+                />
+              </Field>
+              <Field label="Symbol">
+                <Input
+                  value={f.symbol}
+                  onChange={(e) => set("symbol")(e.target.value.toUpperCase())}
+                  placeholder="SDOGE"
+                  maxLength={10}
+                />
+              </Field>
+              <Field label="Description">
+                <Textarea
+                  value={f.description}
+                  onChange={(e) => set("description")(e.target.value)}
+                  placeholder="What makes it special?"
+                  maxLength={280}
+                />
+              </Field>
+
             </>
           )}
           {step === 1 && (
@@ -339,6 +360,20 @@ function Create() {
                   </Button>
                 </div>
               )}
+              <dl className="grid gap-4 border-y border-border py-4 sm:grid-cols-3" aria-label="Token supply allocation">
+                {[
+                  ["Total supply", allocation ? Number(formatEther(allocation.total)).toLocaleString("en-US") : "—"],
+                  ["Bonding curve sale", allocation ? `${allocation.salePercent}%` : "—"],
+                  ["Graduation liquidity", allocation ? `${allocation.lpPercent}%` : "—"],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="mt-2 font-mono text-lg font-semibold">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              {supplyError && <p role="alert" className="text-xs text-danger">Contract supply unavailable.</p>}
+              <p className="text-xs text-muted-foreground">Graduation occurs at 100% of the curve sale allocation; the liquidity allocation moves to the DEX.</p>
               <Field label="Initial buy (zkLTC, optional)">
                 <Input
                   type="number"

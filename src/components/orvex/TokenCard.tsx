@@ -51,11 +51,11 @@ export function TokenCard({ t, win = "24h" }: { t: TokenView; win?: MarketWindow
           <span className="shrink-0 text-[9px] text-muted-foreground">{fmtAge(t.createdAt)}</span>
         </div>
         <div className="mt-1 flex items-center justify-between gap-1">
-          <div className="truncate font-mono text-xs font-bold">{fmtUsd(t.priceUsd)}</div>
+          <div className="truncate font-mono text-xs font-bold">{fmtUsd(t.marketCapUsd)} MC</div>
           <Change v={windowChange(t, win)} />
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-1 font-mono text-[9px] text-muted-foreground">
-          <span>{fmtUsd(t.marketCapUsd)} MC</span>
+          <span>{fmtUsd(t.priceUsd)}</span>
           <span className="truncate">${t.symbol}</span>
         </div>
         <CurveProgress value={t.progress} graduated={t.graduated} className="mt-1.5" />

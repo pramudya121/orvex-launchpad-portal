@@ -162,7 +162,6 @@ function Explore() {
           ))}
         </select>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground">Window</span>
           <div className="flex items-center gap-1 rounded-full border border-input bg-card p-1">
             {MARKET_WINDOWS.map((w) => (
               <Button

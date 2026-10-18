@@ -1,4 +1,5 @@
 import { defineChain, type Address } from "viem";
+import orvxLogo from "@/assets/orvx-token-logo.jpg.asset.json";
 
 export const litvm = defineChain({
   id: 4441,
@@ -30,7 +31,7 @@ export type DexToken = { symbol: string; name: string; address: Address | null; 
 export const DEX_TOKENS: DexToken[] = [
   { symbol: "zkLTC", name: "zkLTC", address: null, logo: cmc(2), decimals: 18 },
   { symbol: "WzkLTC", name: "Wrapped zkLTC", address: CONTRACTS.wzkltc, logo: cmc(2), decimals: 18 },
-  { symbol: "ORVX", name: "ORVEX", address: "0x7216EAb89cDbb52D3D8A0e2F305F9Afb5cE122a3", logo: null, decimals: 18 },
+  { symbol: "ORVX", name: "ORVEX", address: "0x7216EAb89cDbb52D3D8A0e2F305F9Afb5cE122a3", logo: orvxLogo.url, decimals: 18 },
   { symbol: "TRX", name: "TRON", address: "0x8705875084c72C0cDC01c1Ac36A807808c8E5850", logo: cmc(1958), decimals: 18 },
   { symbol: "XRP", name: "XRP", address: "0xA860Fc63d7C3d5cAf5295dE72AEeb4260D7819D4", logo: cmc(52), decimals: 18 },
   { symbol: "ADA", name: "Cardano", address: "0x7b277d0387ccDFC395Eae0EFe2321765afAb37c8", logo: cmc(2010), decimals: 18 },
