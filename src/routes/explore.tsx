@@ -113,7 +113,7 @@ function Explore() {
           </Button>
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
