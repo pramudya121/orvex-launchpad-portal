@@ -5,7 +5,7 @@ import { LayoutGrid, List, Search, X, Compass } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { tokensQuery } from "@/lib/queries";
-import { filterMarket, MARKET_SORTS, type MarketSort } from "@/lib/market";
+import { filterMarket, MARKET_SORTS, MARKET_WINDOWS, type MarketSort, type MarketWindow } from "@/lib/market";
 import { TokenCard, TokenCardSkeleton } from "@/components/orvex/TokenCard";
 import { MarketTable } from "@/components/orvex/MarketTable";
 import { MarketStatus } from "@/components/orvex/MarketStatus";
@@ -15,7 +15,7 @@ import { MarketError, MarketNotFound } from "@/components/orvex/RouteFeedback";
 export const Route = createFileRoute("/explore")({
   validateSearch: (
     s: Record<string, unknown>,
-  ): { q?: string; sort?: MarketSort; stage?: string; view?: "grid" | "list" } => ({
+  ): { q?: string; sort?: MarketSort; stage?: string; view?: "grid" | "list"; win?: MarketWindow } => ({
     q: typeof s["q"] === "string" ? s["q"] : "",
     sort: MARKET_SORTS.includes(s["sort"] as MarketSort)
       ? (s["sort"] as MarketSort)
@@ -24,6 +24,7 @@ export const Route = createFileRoute("/explore")({
       ? String(s["stage"])
       : "all",
     view: s["view"] === "list" ? ("list" as const) : ("grid" as const),
+    win: MARKET_WINDOWS.includes(s["win"] as MarketWindow) ? (s["win"] as MarketWindow) : ("24h" as MarketWindow),
   }),
   head: () => ({
     meta: [
