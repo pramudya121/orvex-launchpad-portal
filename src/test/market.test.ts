@@ -41,7 +41,15 @@ const token = (id: string, graduated = false): TokenView => ({
 });
 describe("market controls", () => {
   it("All uses lifetime volume and change instead of 24H or 7D", () => {
-    const t = { ...token("A"), volumeAllUsd: 850, volume24hUsd: 85, volume7dUsd: 170, changeAll: 40, change24h: 2, change7d: 8 };
+    const t = {
+      ...token("A"),
+      volumeAllUsd: 850,
+      volume24hUsd: 85,
+      volume7dUsd: 170,
+      changeAll: 40,
+      change24h: 2,
+      change7d: 8,
+    };
     expect(windowVolume(t, "all")).toBe(850);
     expect(windowChange(t, "all")).toBe(40);
     expect(windowVolume(t, "24h")).toBe(85);
@@ -50,7 +58,7 @@ describe("market controls", () => {
   it("All volume sorting uses lifetime activity", () => {
     const a = { ...token("A"), volumeAllUsd: 850, volume24hUsd: 0 };
     const b = { ...token("B"), volumeAllUsd: 85, volume24hUsd: 85 };
-    expect(filterMarket([b,a], "", "vol", "all", [], "all").map(t => t.id)).toEqual(["A", "B"]);
+    expect(filterMarket([b, a], "", "vol", "all", [], "all").map((t) => t.id)).toEqual(["A", "B"]);
   });
   it("filters grid and table with the same curve state", () =>
     expect(

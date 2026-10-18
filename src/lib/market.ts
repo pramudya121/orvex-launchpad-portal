@@ -4,8 +4,10 @@ export const MARKET_SORTS = ["new", "mc", "vol", "prog", "change", "old"] as con
 export type MarketSort = (typeof MARKET_SORTS)[number];
 export const MARKET_WINDOWS = ["all", "24h", "7d"] as const;
 export type MarketWindow = (typeof MARKET_WINDOWS)[number];
-export const windowChange = (t: TokenView, w: MarketWindow) => w === "all" ? (t.changeAll ?? 0) : w === "7d" ? t.change7d : t.change24h;
-export const windowVolume = (t: TokenView, w: MarketWindow) => w === "all" ? (t.volumeAllUsd ?? 0) : w === "7d" ? t.volume7dUsd : t.volume24hUsd;
+export const windowChange = (t: TokenView, w: MarketWindow) =>
+  w === "all" ? (t.changeAll ?? 0) : w === "7d" ? t.change7d : t.change24h;
+export const windowVolume = (t: TokenView, w: MarketWindow) =>
+  w === "all" ? (t.volumeAllUsd ?? 0) : w === "7d" ? t.volume7dUsd : t.volume24hUsd;
 export function filterMarket(
   tokens: TokenView[],
   search: string,

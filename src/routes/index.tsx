@@ -83,10 +83,34 @@ function Home() {
           </Button>
         </div>
       </section>
-      {tokens.length > 0 && <section aria-label="Live market ticker" className="market-ticker flex gap-6 overflow-x-auto border-y border-border py-3">
-        <span className="flex shrink-0 items-center gap-2 text-[10px] font-semibold text-success"><span className="market-beacon size-1.5 rounded-full bg-success" /> LIVE MARKETS</span>
-        {tokens.slice(0, 10).map(t => <Link key={t.id} to="/token/$symbol" params={{ symbol: t.symbol }} className="flex shrink-0 items-center gap-2 text-xs transition-colors hover:text-primary"><TokenLogo symbol={t.symbol} url={t.logoUrl} size={22} /><span className="font-semibold">{t.symbol}</span><span className="font-mono text-muted-foreground">{fmtUsd(t.priceUsd)}</span><span className={t.change24h >= 0 ? "font-mono text-success" : "font-mono text-danger"}>{t.change24h >= 0 ? "+" : ""}{t.change24h.toFixed(2)}%</span></Link>)}
-      </section>}
+      {tokens.length > 0 && (
+        <section
+          aria-label="Live market ticker"
+          className="market-ticker flex gap-6 overflow-x-auto border-y border-border py-3"
+        >
+          <span className="flex shrink-0 items-center gap-2 text-[10px] font-semibold text-success">
+            <span className="market-beacon size-1.5 rounded-full bg-success" /> LIVE MARKETS
+          </span>
+          {tokens.slice(0, 10).map((t) => (
+            <Link
+              key={t.id}
+              to="/token/$symbol"
+              params={{ symbol: t.symbol }}
+              className="flex shrink-0 items-center gap-2 text-xs transition-colors hover:text-primary"
+            >
+              <TokenLogo symbol={t.symbol} url={t.logoUrl} size={22} />
+              <span className="font-semibold">{t.symbol}</span>
+              <span className="font-mono text-muted-foreground">{fmtUsd(t.priceUsd)}</span>
+              <span
+                className={t.change24h >= 0 ? "font-mono text-success" : "font-mono text-danger"}
+              >
+                {t.change24h >= 0 ? "+" : ""}
+                {t.change24h.toFixed(2)}%
+              </span>
+            </Link>
+          ))}
+        </section>
+      )}
       <section className="grid grid-cols-2 gap-y-5 border-b border-border pb-6 lg:grid-cols-4">
         {stats.map((s) => (
           <div

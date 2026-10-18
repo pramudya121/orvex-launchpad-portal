@@ -7,7 +7,8 @@ import { activeHolders } from "./market";
 
 type TokenRow = Database["public"]["Tables"]["tokens"]["Row"];
 type TradeRow = Database["public"]["Tables"]["token_trades"]["Row"];
-type MarketStats = Database["public"]["Functions"]["token_market_stats"]["Returns"][number] & Partial<Database["public"]["Functions"]["token_market_all_stats"]["Returns"][number]>;
+type MarketStats = Database["public"]["Functions"]["token_market_stats"]["Returns"][number] &
+  Partial<Database["public"]["Functions"]["token_market_all_stats"]["Returns"][number]>;
 
 export type TokenView = {
   id: string;
@@ -145,7 +146,9 @@ function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenVie
     graduated: t.graduated,
     maxBuy: t.max_buy === null ? null : Number(t.max_buy),
     change24h: first ? (price / first - 1) * 100 : 0,
-    volume24hUsd: (stats ? Number(stats.volume_24h) : recent.reduce((s, x) => s + x.baseAmount, 0)) * CURVE.baseUsd,
+    volume24hUsd:
+      (stats ? Number(stats.volume_24h) : recent.reduce((s, x) => s + x.baseAmount, 0)) *
+      CURVE.baseUsd,
     trades24h: stats ? Number(stats.trades_24h) : recent.length,
     change7d: first7 ? (price / first7 - 1) * 100 : 0,
     volume7dUsd: (stats ? Number(stats.volume_7d) : 0) * CURVE.baseUsd,
@@ -169,7 +172,10 @@ export const listTokens = createServerFn({ method: "GET" }).handler(
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error("Could not load tokens");
-    const stats = await loadStats(sb, (tokens ?? []).map((t) => t.id));
+    const stats = await loadStats(
+      sb,
+      (tokens ?? []).map((t) => t.id),
+    );
     return (tokens ?? []).map((t) => toView(t, [], stats.get(t.id)));
   },
 );
@@ -272,7 +278,11 @@ export const getPortfolio = createServerFn({ method: "GET" })
     await sync();
     const sb = publicClient();
     const a = data.address.toLowerCase();
-    const { data: tokens, error: tokensError } = await sb.from("tokens").select("*").eq("onchain", true).limit(500);
+    const { data: tokens, error: tokensError } = await sb
+      .from("tokens")
+      .select("*")
+      .eq("onchain", true)
+      .limit(500);
     if (tokensError) throw new Error("Portfolio tokens could not be loaded");
     const { data: trades, error: tradesError } = await sb
       .from("token_trades")
@@ -317,12 +327,10 @@ export const getPortfolio = createServerFn({ method: "GET" })
       partial: list.length >= 500 || (trades?.length ?? 0) >= 1000,
       holdings,
       created: list.filter((t) => t.creator === a).map((t) => toView(t, [])),
-      history: (trades ?? [])
-        .slice(0, 20)
-        .map((x) => ({
-          ...toTrade(x),
-          symbol: list.find((h) => h.id === x.token_id)?.symbol ?? "?",
-        })),
+      history: (trades ?? []).slice(0, 20).map((x) => ({
+        ...toTrade(x),
+        symbol: list.find((h) => h.id === x.token_id)?.symbol ?? "?",
+      })),
     };
   });
 
@@ -330,7 +338,11 @@ export const getPortfolio = createServerFn({ method: "GET" })
 export const getLeaderboard = createServerFn({ method: "GET" }).handler(async () => {
   await sync();
   const sb = publicClient();
-  const { data: tokens, error: tokensError } = await sb.from("tokens").select("*").eq("onchain", true).limit(500);
+  const { data: tokens, error: tokensError } = await sb
+    .from("tokens")
+    .select("*")
+    .eq("onchain", true)
+    .limit(500);
   if (tokensError) throw new Error("Leaderboard tokens could not be loaded");
   const { data: trades, error: tradesError } = await sb
     .from("token_trades")
