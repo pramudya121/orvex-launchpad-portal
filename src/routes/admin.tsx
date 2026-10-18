@@ -115,6 +115,7 @@ function AdminConsole() {
     );
 
   // On-chain shares are basis points (10000 = 100%).
+  if (!isOwner) return <div className="py-16 text-center text-muted-foreground">Owner access required.</div>;
   const totalShare = s.treasuryShare + s.teamShare + s.marketingShare;
   const pct = (bps: number) => bps / 100;
 
