@@ -20,10 +20,10 @@ export function MarketTable({ tokens, win = "24h" }: { tokens: TokenView[]; win?
               "#",
               "Token",
               "Price",
-              "24h %",
+              `${win} %`,
               "MCap / Curve",
               "Raised",
-              "Vol 24h",
+              `Vol ${win}`,
               "Holders*",
               "Age",
               "Trade",
@@ -55,7 +55,7 @@ export function MarketTable({ tokens, win = "24h" }: { tokens: TokenView[]; win?
               </td>
               <td className="px-3 py-4 font-mono">{fmtUsd(t.priceUsd)}</td>
               <td className="px-3 py-4">
-                <Change v={t.change24h} />
+                <Change v={windowChange(t, win)} />
               </td>
               <td className="w-40 px-3 py-4">
                 <div className="mb-1 font-mono font-semibold">{fmtUsd(t.marketCapUsd)}</div>
@@ -64,7 +64,7 @@ export function MarketTable({ tokens, win = "24h" }: { tokens: TokenView[]; win?
               <td className="px-3 py-4 font-mono" title={`${t.realBase.toFixed(5)} zkLTC raised`}>
                 {fmtUsd(t.realBase * CURVE.baseUsd)}
               </td>
-              <td className="px-3 py-4 font-mono">{fmtUsd(t.volume24hUsd)}</td>
+              <td className="px-3 py-4 font-mono">{fmtUsd(windowVolume(t, win))}</td>
               <td className="px-3 py-4 font-mono">{t.holders}</td>
               <td className="px-3 py-4 text-muted-foreground">{fmtAge(t.createdAt)}</td>
               <td className="px-3 py-4">
