@@ -1,5 +1,10 @@
 # ORVEX improvements
 
+- [ ] Remove Explore Window label and emphasize market cap on token cards.
+- [ ] Separate DEX Swap/Liquidity/Pools navigation and add uploaded ORVX logo.
+- [ ] Move Create logo upload to top and show contract supply allocations.
+- [ ] Inspect and improve database performance and integrity; verify public flows and document remaining scale blockers.
+
 - [x] Add Explore Window All/24H/7D with matching real statistics and window sorting tests.
 - [x] Save the supplied ITACHI logo and verify it displays on cards and token details.
 - [x] Add subtle reduced-motion-aware Home animations and refine DEX pools; verify search, pool selection, live reserves and mobile layouts.
