@@ -147,6 +147,19 @@ function Explore() {
             </option>
           ))}
         </select>
+        <div className="flex items-center gap-1 rounded-md border border-input bg-card p-0.5">
+          {MARKET_WINDOWS.map((w) => (
+            <button
+              key={w}
+              onClick={() => update({ win: w })}
+              className={`rounded px-2.5 py-1 font-mono text-[11px] font-semibold uppercase transition ${
+                s.win === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {w}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-1">
           <Button
             variant={s.view === "grid" ? "secondary" : "ghost"}
@@ -192,11 +205,11 @@ function Explore() {
       ) : s.view === "grid" ? (
         <div className="token-grid">
           {list.map((t) => (
-            <TokenCard key={t.id} t={t} />
+            <TokenCard key={t.id} t={t} win={s.win} />
           ))}
         </div>
       ) : (
-        <MarketTable tokens={list} />
+        <MarketTable tokens={list} win={s.win} />
       )}
       <p className="text-[10px] text-muted-foreground">
         Raised is curve funding, not DEX liquidity. Holder counts reflect indexed curve trades, not
