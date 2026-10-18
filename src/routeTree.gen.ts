@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as DeployRouteImport } from './routes/deploy'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as TrendingRouteImport } from './routes/trending'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const CreateRoute = CreateRouteImport.update({
   id: '/create',
   path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeployRoute = DeployRouteImport.update({
+  id: '/deploy',
+  path: '/deploy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExploreRoute = ExploreRouteImport.update({
@@ -50,6 +56,7 @@ const TokenSymbolRoute = TokenSymbolRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
+  '/deploy': typeof DeployRoute
   '/explore': typeof ExploreRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
+  '/deploy': typeof DeployRoute
   '/explore': typeof ExploreRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
+  '/deploy': typeof DeployRoute
   '/explore': typeof ExploreRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
@@ -75,14 +84,27 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/create' | '/explore' | '/portfolio' | '/trending' | '/token/$symbol'
+    | '/'
+    | '/create'
+    | '/deploy'
+    | '/explore'
+    | '/portfolio'
+    | '/trending'
+    | '/token/$symbol'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/create' | '/explore' | '/portfolio' | '/trending' | '/token/$symbol'
+    | '/'
+    | '/create'
+    | '/deploy'
+    | '/explore'
+    | '/portfolio'
+    | '/trending'
+    | '/token/$symbol'
   id:
     | '__root__'
     | '/'
     | '/create'
+    | '/deploy'
     | '/explore'
     | '/portfolio'
     | '/trending'
@@ -92,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateRoute: typeof CreateRoute
+  DeployRoute: typeof DeployRoute
   ExploreRoute: typeof ExploreRoute
   PortfolioRoute: typeof PortfolioRoute
   TrendingRoute: typeof TrendingRoute
@@ -112,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/create'
       fullPath: '/create'
       preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deploy': {
+      id: '/deploy'
+      path: '/deploy'
+      fullPath: '/deploy'
+      preLoaderRoute: typeof DeployRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explore': {
@@ -148,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateRoute: CreateRoute,
+  DeployRoute: DeployRoute,
   ExploreRoute: ExploreRoute,
   PortfolioRoute: PortfolioRoute,
   TrendingRoute: TrendingRoute,

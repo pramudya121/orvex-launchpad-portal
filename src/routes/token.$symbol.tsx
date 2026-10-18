@@ -10,7 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { fmtUsd, fmtNum, fmtAge, short } from "@/lib/tokens";
 import { tokenQuery, portfolioQuery } from "@/lib/queries";
-import { trade, type TokenView } from "@/lib/launchpad.functions";
+import { trade, indexTx, type TokenView } from "@/lib/launchpad.functions";
+import type { Address } from "viem";
+import { buyOnchain, sellOnchain, walletError } from "@/lib/web3/actions";
+import { explorerTx, explorerAddress } from "@/lib/web3/chain";
 import { CURVE, quoteBuy, quoteSell } from "@/lib/curve";
 import { supabase } from "@/integrations/supabase/client";
 import { TokenLogo } from "@/components/orvex/TokenLogo";
@@ -71,6 +74,9 @@ function TokenPage() {
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             ${t.symbol}
             <button onClick={() => { navigator.clipboard.writeText(t.address); toast("Contract copied"); }} className="flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 font-mono text-xs hover:text-foreground">{short(t.address)} <Copy className="size-3" /></button>
+            {t.onchain
+              ? <a href={explorerAddress(t.address)} target="_blank" rel="noreferrer" className="rounded-md bg-success/15 px-2 py-0.5 text-xs text-success hover:underline">On-chain · Explorer</a>
+              : <span className="rounded-md bg-surface px-2 py-0.5 text-xs">Demo</span>}
             {t.website && <a href={t.website} target="_blank" rel="noreferrer" className="hover:text-foreground">Website</a>}
           </div>
         </div>
@@ -152,9 +158,10 @@ function CurveCard({ t }: { t: TokenView }) {
 }
 
 function SwapPanel({ t }: { t: TokenView }) {
-  const { address, open } = useWallet();
+  const { address, open, onchain } = useWallet();
   const qc = useQueryClient();
   const doTrade = useServerFn(trade);
+  const doIndex = useServerFn(indexTx);
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amt, setAmt] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -170,22 +177,37 @@ function SwapPanel({ t }: { t: TokenView }) {
   const err = quote && "error" in quote ? quote.error : side === "sell" && n > balance + 1e-6 ? "Insufficient balance" : null;
   const q = quote && !("error" in quote) ? quote : null;
 
+  const refresh = () => {
+    setAmt("");
+    qc.invalidateQueries({ queryKey: ["token"] });
+    qc.invalidateQueries({ queryKey: ["tokens"] });
+    qc.invalidateQueries({ queryKey: ["portfolio"] });
+  };
+
   const submit = async () => {
-    if (!address) return;
+    if (!address || !q) return;
     setBusy(true);
     try {
+      if (onchain && t.onchain) {
+        const hash = side === "buy"
+          ? await buyOnchain(address as Address, t.address as Address, n, q.tokenAmount)
+          : await sellOnchain(address as Address, t.address as Address, n, q.baseAmount);
+        await doIndex({ data: { txHash: hash } });
+        toast.success(side === "buy" ? `Bought ${fmtNum(q.tokenAmount)} ${t.symbol}` : `Sold for ${q.baseAmount.toFixed(4)} zkLTC`, {
+          action: { label: "View tx", onClick: () => window.open(explorerTx(hash), "_blank", "noopener") },
+        });
+        refresh();
+        return;
+      }
       const r = await doTrade({ data: { tokenId: t.id, side, amount: n, trader: address } });
       if ("error" in r) toast.error(r.error);
       else {
         toast.success(side === "buy" ? `Bought ${fmtNum(r.tokenAmount)} ${t.symbol}` : `Sold for ${r.baseAmount.toFixed(4)} zkLTC`);
         if (r.graduated) toast.success(`${t.symbol} graduated! 🎓`);
-        setAmt("");
-        qc.invalidateQueries({ queryKey: ["token"] });
-        qc.invalidateQueries({ queryKey: ["tokens"] });
-        qc.invalidateQueries({ queryKey: ["portfolio"] });
+        refresh();
       }
-    } catch {
-      toast.error("Trade failed, please try again");
+    } catch (e) {
+      toast.error(onchain ? walletError(e) : "Trade failed, please try again");
     } finally {
       setBusy(false);
     }
