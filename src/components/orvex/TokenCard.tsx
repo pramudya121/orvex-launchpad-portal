@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { BadgeCheck } from "lucide-react";
-import { fmtAge, fmtUsd, short, type Token } from "@/lib/tokens";
+import { fmtAge, fmtUsd, short } from "@/lib/tokens";
+import type { TokenView } from "@/lib/launchpad.functions";
 import { TokenLogo } from "./TokenLogo";
 import { Change } from "./Change";
+import { CurveProgress } from "./CurveProgress";
 
-export function TokenCard({ t }: { t: Token }) {
+export function TokenCard({ t }: { t: TokenView }) {
   return (
     <Link
       to="/token/$symbol"
@@ -12,24 +13,26 @@ export function TokenCard({ t }: { t: Token }) {
       className="glass group block rounded-2xl p-5 transition hover:-translate-y-0.5 hover:border-primary-glow/40 hover:shadow-glow focus-visible:outline-2 focus-visible:outline-ring"
     >
       <div className="flex items-center gap-3">
-        <TokenLogo symbol={t.symbol} hue={t.hue} size={44} />
+        <TokenLogo symbol={t.symbol} url={t.logoUrl} size={44} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 font-semibold">
-            <span className="truncate">{t.name}</span>
-            {t.verified && <BadgeCheck className="size-4 text-primary-glow" />}
-          </div>
-          <div className="text-xs text-muted-foreground">${t.symbol} · {fmtAge(t.ageHours)}</div>
+          <div className="truncate font-semibold">{t.name}</div>
+          <div className="text-xs text-muted-foreground">${t.symbol} · {fmtAge(t.createdAt)}</div>
         </div>
         <Change v={t.change24h} />
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-        <Stat label="Price" value={fmtUsd(t.price)} />
-        <Stat label="MCap" value={fmtUsd(t.marketCap)} />
-        <Stat label="Vol 24h" value={fmtUsd(t.volume24h)} />
+        <Stat label="Price" value={fmtUsd(t.priceUsd)} />
+        <Stat label="MCap" value={fmtUsd(t.marketCapUsd)} />
+        <Stat label="Vol 24h" value={fmtUsd(t.volume24hUsd)} />
       </div>
+      <CurveProgress value={t.progress} graduated={t.graduated} className="mt-4" />
       <div className="mt-3 text-[11px] text-muted-foreground">by <span className="font-mono">{short(t.creator)}</span></div>
     </Link>
   );
+}
+
+export function TokenCardSkeleton() {
+  return <div className="glass h-[214px] animate-pulse rounded-2xl" />;
 }
 
 function Stat({ label, value }: { label: string; value: string }) {

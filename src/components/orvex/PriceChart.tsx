@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { CandlestickSeries, HistogramSeries, createChart, type UTCTimestamp } from "lightweight-charts";
-import { genCandles, TIMEFRAMES, type Timeframe, type Token } from "@/lib/tokens";
+import { CandlestickSeries, HistogramSeries, createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
+import { buildCandles, TIMEFRAMES, type Timeframe } from "@/lib/tokens";
+import type { TradeView } from "@/lib/launchpad.functions";
+import { CURVE } from "@/lib/curve";
 import { cn } from "@/lib/utils";
 
 function cssVar(name: string) {
@@ -12,9 +14,10 @@ function cssVar(name: string) {
   return c;
 }
 
-export function PriceChart({ token }: { token: Token }) {
+export function PriceChart({ trades }: { trades: TradeView[] }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [tf, setTf] = useState<Timeframe>("15m");
+  const api = useRef<{ chart: IChartApi; c: ISeriesApi<"Candlestick">; v: ISeriesApi<"Histogram">; up: string; down: string } | null>(null);
+  const [tf, setTf] = useState<Timeframe>("1m");
 
   useEffect(() => {
     if (!ref.current) return;
@@ -25,30 +28,26 @@ export function PriceChart({ token }: { token: Token }) {
       grid: { vertLines: { color: grid }, horzLines: { color: grid } },
       rightPriceScale: { borderColor: grid },
       timeScale: { borderColor: grid, timeVisible: true },
-      crosshair: { mode: 1 },
     });
-    const candles = chart.addSeries(CandlestickSeries, {
+    const c = chart.addSeries(CandlestickSeries, {
       upColor: up, downColor: down, wickUpColor: up, wickDownColor: down, borderVisible: false,
-      priceFormat: { type: "price", precision: 8, minMove: 0.00000001 },
+      priceFormat: { type: "custom", minMove: 1e-12, formatter: (p: number) => "$" + p.toPrecision(4) },
     });
-    const vol = chart.addSeries(HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" } });
-    vol.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    const v = chart.addSeries(HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" } });
+    v.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    api.current = { chart, c, v, up, down };
+    return () => { chart.remove(); api.current = null; };
+  }, []);
 
-    const data = genCandles(token, tf);
-    candles.setData(data.map((c) => ({ ...c, time: c.time as UTCTimestamp })));
-    vol.setData(data.map((c) => ({ time: c.time as UTCTimestamp, value: c.volume, color: c.close >= c.open ? up.replace(")", " / 0.4)") : down.replace(")", " / 0.4)") })));
-    chart.timeScale().fitContent();
-
-    // simulated live ticks
-    let last = { ...data[data.length - 1]! };
-    const id = setInterval(() => {
-      const close = Math.max(last.close * (1 + (Math.random() - 0.5) * 0.01), 1e-8);
-      last = { ...last, close, high: Math.max(last.high, close), low: Math.min(last.low, close) };
-      candles.update({ ...last, time: last.time as UTCTimestamp });
-    }, 1500);
-
-    return () => { clearInterval(id); chart.remove(); };
-  }, [token, tf]);
+  useEffect(() => {
+    const a = api.current;
+    if (!a) return;
+    const start = CURVE.initVirtualBase / CURVE.initVirtualToken;
+    const candles = buildCandles(trades, tf, start).map((k) => ({ ...k, open: k.open * CURVE.baseUsd, high: k.high * CURVE.baseUsd, low: k.low * CURVE.baseUsd, close: k.close * CURVE.baseUsd }));
+    a.c.setData(candles.map((k) => ({ ...k, time: k.time as UTCTimestamp })));
+    a.v.setData(candles.map((k) => ({ time: k.time as UTCTimestamp, value: k.volume, color: k.close >= k.open ? a.up : a.down })));
+    a.chart.timeScale().fitContent();
+  }, [trades, tf]);
 
   return (
     <div className="glass rounded-2xl p-3">
@@ -60,7 +59,12 @@ export function PriceChart({ token }: { token: Token }) {
         ))}
         <span className="ml-auto flex items-center gap-1.5 text-xs text-success"><span className="size-1.5 animate-pulse rounded-full bg-success" />Live</span>
       </div>
-      <div ref={ref} className="h-[420px] w-full" />
+      <div className="relative">
+        <div ref={ref} className="h-[420px] w-full" />
+        {trades.length === 0 && (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-muted-foreground">No trades yet — be the first buyer.</div>
+        )}
+      </div>
     </div>
   );
 }
