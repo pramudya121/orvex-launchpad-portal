@@ -27,7 +27,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/token/$symbol")({
-  validateSearch: (s: Record<string, unknown>) => ({ side: s["side"] === "sell" ? "sell" as const : "buy" as const }),
+  validateSearch: (s: Record<string, unknown>): { side?: "buy" | "sell" } => ({ side: s["side"] === "sell" ? "sell" as const : "buy" as const }),
   errorComponent: MarketError, notFoundComponent: MarketNotFound,
   loader: async ({ context, params }) => {
     const d = await context.queryClient.ensureQueryData(tokenQuery(params.symbol));
@@ -168,7 +168,7 @@ function SwapPanel({ t }: { t: TokenView }) {
   const { address, open } = useWallet();
   const qc = useQueryClient();
   const doIndex = useServerFn(indexTx);
-  const { side } = Route.useSearch();
+  const side = Route.useSearch().side ?? "buy";
   const navigate = Route.useNavigate();
   const [amt, setAmt] = useState("");
   const [confirm, setConfirm] = useState(false);
