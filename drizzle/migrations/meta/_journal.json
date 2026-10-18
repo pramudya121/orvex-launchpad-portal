@@ -8,41 +8,6 @@
       "when": 1792332838629,
       "tag": "0000_remix_empty_baseline",
       "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1792333523029,
-      "tag": "0001_live_trade_event_index",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1792334383793,
-      "tag": "0002_chain_event_provenance",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1792334410846,
-      "tag": "0003_indexed_market_statistics",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1792334814140,
-      "tag": "0004_exclusive_chain_sync_lease",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1792334951268,
-      "tag": "0005_restrict_sync_checkpoint_policy",
-      "breakpoints": true
     }
   ]
 }
