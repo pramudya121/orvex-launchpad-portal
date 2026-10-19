@@ -44,6 +44,7 @@ export function PriceChart({ trades, token }: { trades: TradeView[]; token: Toke
     const { up, down, text: fg, grid } = COLORS;
     const chart = createChart(ref.current, {
       autoSize: true,
+      localization: { locale: "en-US" },
       layout: { background: { color: "transparent" }, textColor: fg, fontFamily: "JetBrains Mono, monospace" },
       grid: { vertLines: { color: grid }, horzLines: { color: grid } },
       rightPriceScale: { borderColor: grid },

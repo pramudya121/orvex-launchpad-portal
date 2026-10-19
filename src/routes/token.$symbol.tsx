@@ -1,7 +1,8 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { createSubmissionLock } from "@/lib/submission-lock";
 import { Copy, Heart, Share2, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -292,6 +293,7 @@ function SwapPanel({ t }: { t: TokenView }) {
   const { address, open } = useWallet();
   const qc = useQueryClient();
   const doIndex = useServerFn(indexTx);
+  const submissionLock = useRef(createSubmissionLock());
   const side = Route.useSearch().side ?? "buy";
   const navigate = Route.useNavigate();
   const [amt, setAmt] = useState("");
@@ -332,6 +334,7 @@ function SwapPanel({ t }: { t: TokenView }) {
 
   const submit = async () => {
     if (!address || !q || !t.curveAddress || busy || err) return;
+    if (!submissionLock.current.acquire()) return;
     setBusy(true);
     try {
       const freshBalance = await qc.fetchQuery(
@@ -356,13 +359,22 @@ function SwapPanel({ t }: { t: TokenView }) {
               amt,
               q.baseAmount,
             );
-      const r = await doIndex({ data: { txHash: hash } });
+      setAmt("");
+      for (const key of ["token", "tokens", "portfolio", "trade-balance", "live-trades"])
+        void qc.invalidateQueries({ queryKey: [key] });
+      let indexingError: string | undefined;
+      try {
+        const r = await doIndex({ data: { txHash: hash } });
+        indexingError = "error" in r ? r.error : undefined;
+      } catch {
+        indexingError = "Trade confirmed. Market history will update automatically.";
+      }
       toast.success(
         side === "buy"
           ? `Bought ~${fmtNum(q.tokenAmount)} ${t.symbol}`
           : `Sold for ~${q.baseAmount.toFixed(4)} zkLTC`,
         {
-          description: "error" in r ? r.error : undefined,
+          description: indexingError,
           action: {
             label: "View tx",
             onClick: () => window.open(explorerTx(hash), "_blank", "noopener"),
@@ -377,6 +389,7 @@ function SwapPanel({ t }: { t: TokenView }) {
     } catch (e) {
       toast.error(walletError(e));
     } finally {
+      submissionLock.current.release();
       setBusy(false);
     }
   };

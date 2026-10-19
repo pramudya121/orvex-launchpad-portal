@@ -21,6 +21,8 @@
 - Market lists share URL-based filters, a local watchlist provider and shared query invalidation; polling is a fallback to database Realtime, because event delivery and chain confirmation cannot be assumed instantaneous.
 - Chain indexing reconciles factory entries by address and advances bounded durable event checkpoints only after successful writes, so outages cannot silently skip historical events.
 - Chain indexing acquires a service-role-only expiring database lease and uses conditional curve checkpoint writes, so concurrent polling cannot regress scan progress; workers stop within a bounded execution budget.
+- Public market reads serve indexed state without waiting for global chain scans; an authenticated managed schedule owns bounded synchronization so visitor traffic cannot amplify RPC scanning.
+- Wallet transaction entry points use synchronous submission locks in addition to disabled controls, so rapid repeated clicks cannot submit duplicate transactions.
 - Pending token launch hashes and metadata survive refresh in session storage from wallet submission until successful indexing, so confirmation delays cannot cause repeat deployment fees.
 - Wallet writes revalidate chain and account; DEX quotes and balances identify assets by address, validate routes and token precision before submission, so symbols and stale quotes cannot redirect trades.
 - Chain reads use direct RPC calls rather than the configured multicall contract, because that address currently reverts on LiteForge.

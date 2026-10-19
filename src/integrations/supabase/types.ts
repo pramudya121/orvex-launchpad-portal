@@ -43,6 +43,7 @@ export type Database = {
       }
       chain_sync: {
         Row: {
+          factory_cursor: number
           id: string
           last_block: number
           lease_id: string | null
@@ -50,6 +51,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          factory_cursor?: number
           id: string
           last_block?: number
           lease_id?: string | null
@@ -57,6 +59,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          factory_cursor?: number
           id?: string
           last_block?: number
           lease_id?: string | null

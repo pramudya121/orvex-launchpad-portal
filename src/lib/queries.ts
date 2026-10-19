@@ -7,6 +7,7 @@ export const tokenPagesQuery = (q = "", stage: "all" | "curve" | "graduated" | "
   queryFn: ({ pageParam }) => listTokenPage({ data: { cursor: pageParam, q, stage, favorites } }),
   getNextPageParam: (page) => page.nextCursor ?? undefined,
   staleTime: 30_000,
+  refetchInterval: 60_000,
 });
 
 export const tokensQuery = () =>
@@ -14,12 +15,12 @@ export const tokensQuery = () =>
     queryKey: ["tokens"],
     queryFn: () => listTokens(),
     staleTime: 10_000,
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
   });
 export const tokenQuery = (symbol: string) =>
   queryOptions({
     queryKey: ["token", symbol.toUpperCase()],
-    refetchInterval: 15_000,
+    refetchInterval: 30_000,
     queryFn: () => getTokenDetail({ data: { symbol } }),
   });
 export const portfolioQuery = (address: string) =>
@@ -40,5 +41,6 @@ export const liveTradesQuery = () =>
   queryOptions({
     queryKey: ["live-trades"],
     queryFn: () => listLiveTrades(),
-    refetchInterval: 10_000,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
   });

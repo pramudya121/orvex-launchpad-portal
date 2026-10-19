@@ -10,7 +10,8 @@ import { buyOnchain, createOnchain, creationFee, walletError } from "@/lib/web3/
 import { CONTRACTS, explorerTx } from "@/lib/web3/chain";
 import { publicClient } from "@/lib/web3/client";
 import { bondingCurveAbi } from "@/lib/web3/abi";
-import { useState, useId, useEffect } from "react";
+import { useState, useId, useEffect, useRef } from "react";
+import { createSubmissionLock } from "@/lib/submission-lock";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ function Create() {
   const navigate = useNavigate();
   const doUpload = useServerFn(uploadLogo);
   const doIndex = useServerFn(indexTx);
+  const submissionLock = useRef(createSubmissionLock());
   const [step, setStep] = useState(0);
   const [f, setF] = useState({
     name: "",
@@ -83,6 +85,7 @@ function Create() {
   });
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  useEffect(() => () => { if (logo) URL.revokeObjectURL(logo); }, [logo]);
   const [confirm, setConfirm] = useState(false);
   const [pendingHash, setPendingHash] = useState<string | null>(null);
   const [pendingMeta, setPendingMeta] = useState<Record<string, string | undefined> | undefined>();
@@ -145,6 +148,7 @@ function Create() {
   const run = async () => {
     setConfirm(false);
     if (!address || fee === undefined || !devBuyValid || deploy || pendingHash) return;
+    if (!submissionLock.current.acquire()) return;
     const symbol = f.symbol.trim().toUpperCase();
     try {
       if (logoFile) validateLogoSize(logoFile.size, logoFile.type);
@@ -246,6 +250,7 @@ function Create() {
     } catch (e) {
       toast.error(walletError(e));
     } finally {
+      submissionLock.current.release();
       setDeploy(null);
     }
   };
@@ -457,6 +462,7 @@ function Create() {
                 <Button
                   variant="outline"
                   onClick={async () => {
+                    if (!submissionLock.current.acquire()) return;
                     setDeploy({ p: 65, label: "Retrying market indexing" });
                     try {
                       const result = await doIndex({
@@ -470,6 +476,7 @@ function Create() {
                     } catch (e) {
                       toast.error(walletError(e));
                     } finally {
+                      submissionLock.current.release();
                       setDeploy(null);
                     }
                   }}

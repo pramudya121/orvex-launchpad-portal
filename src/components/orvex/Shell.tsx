@@ -57,9 +57,9 @@ export function Shell({ children }: { children: ReactNode }) {
       if (timer) return;
       timer = setTimeout(() => {
         timer = undefined;
-        for (const key of ["tokens", "token", "portfolio", "leaderboard"])
+        for (const key of ["tokens", "token", "portfolio", "leaderboard", "live-trades", "trade-balance"])
           qc.invalidateQueries({ queryKey: [key] });
-      }, 300);
+      }, 1500);
     };
     const channel = supabase
       .channel("orvex-market-live")
