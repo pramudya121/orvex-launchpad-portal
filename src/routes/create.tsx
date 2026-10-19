@@ -12,6 +12,7 @@ import { publicClient } from "@/lib/web3/client";
 import { bondingCurveAbi } from "@/lib/web3/abi";
 import { useState, useId, useEffect, useRef } from "react";
 import { createSubmissionLock } from "@/lib/submission-lock";
+import { transactionAmount } from "@/lib/web3/trade-safety";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -89,6 +90,22 @@ function Create() {
   const [confirm, setConfirm] = useState(false);
   const [pendingHash, setPendingHash] = useState<string | null>(null);
   const [pendingMeta, setPendingMeta] = useState<Record<string, string | undefined> | undefined>();
+  const [receiptStatus, setReceiptStatus] = useState<"pending" | "success" | "reverted" | null>(null);
+  useEffect(() => {
+    if (!pendingHash) { setReceiptStatus(null); return; }
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const receipt = await publicClient().getTransactionReceipt({ hash: pendingHash as `0x${string}` });
+        if (!cancelled) setReceiptStatus(receipt.status);
+      } catch {
+        if (!cancelled) setReceiptStatus("pending");
+      }
+    };
+    void check();
+    const timer = setInterval(() => { void check(); }, 10_000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [pendingHash]);
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem("orvex-pending-launch");
@@ -97,6 +114,9 @@ function Create() {
       if (/^0x[0-9a-fA-F]{64}$/.test(value.hash)) {
         setPendingHash(value.hash);
         setPendingMeta(value.meta);
+        if (value.form && typeof value.form.name === "string" && typeof value.form.symbol === "string") {
+          setF((old) => ({ ...old, name: value.form.name, symbol: value.form.symbol }));
+        }
         setStep(3);
       }
     } catch {
@@ -151,6 +171,10 @@ function Create() {
     if (!submissionLock.current.acquire()) return;
     const symbol = f.symbol.trim().toUpperCase();
     try {
+      const pc = publicClient();
+      const [freshFee, funds] = await Promise.all([creationFee(), pc.getBalance({ address })]);
+      const initialBuy = devBuy > 0 ? transactionAmount(f.devBuy) : 0n;
+      if (funds <= freshFee + initialBuy) throw new Error("Not enough zkLTC for the launch, initial buy and network fees");
       if (logoFile) validateLogoSize(logoFile.size, logoFile.type);
       let logoUrl: string | undefined;
       if (logoFile) {
@@ -182,7 +206,7 @@ function Create() {
         (hash) => {
           setPendingHash(hash);
           setPendingMeta(meta);
-          sessionStorage.setItem("orvex-pending-launch", JSON.stringify({ hash, meta }));
+          sessionStorage.setItem("orvex-pending-launch", JSON.stringify({ hash, meta, form: { name: f.name, symbol } }));
         },
       );
       setDeploy({ p: 65, label: "Indexing your token" });
@@ -455,12 +479,12 @@ function Create() {
           {pendingHash && !deploy && (
             <div role="status" className="space-y-3 rounded-lg border border-border p-4">
               <p className="text-sm">
-                Launch transaction submitted. Do not deploy again; check confirmation and retry
-                adding it to the market.
+                {receiptStatus === "reverted" ? "Launch transaction reverted. No token was deployed." : receiptStatus === "success" ? "Launch confirmed. Retry adding your token to the market; do not deploy again." : "Launch submitted, waiting for network confirmation. Do not deploy again."}
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
+                  disabled={receiptStatus !== "success"}
                   onClick={async () => {
                     if (!submissionLock.current.acquire()) return;
                     setDeploy({ p: 65, label: "Retrying market indexing" });
@@ -483,6 +507,7 @@ function Create() {
                 >
                   Retry indexing
                 </Button>
+                {receiptStatus === "reverted" && <Button variant="outline" onClick={clearPending}>Dismiss failed launch</Button>}
                 <Button variant="link" asChild>
                   <a href={explorerTx(pendingHash)} target="_blank" rel="noreferrer">
                     View transaction
