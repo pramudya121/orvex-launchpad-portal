@@ -21,6 +21,7 @@ import { Route as TrendingRouteImport } from './routes/trending'
 import { Route as AdminFaucetRouteImport } from './routes/admin.faucet'
 import { Route as TokenSymbolRouteImport } from './routes/token.$symbol'
 import { Route as ApiOauthXReturnRouteImport } from './routes/api/oauth/x/return'
+import { Route as ApiPublicJobsSyncChainRouteImport } from './routes/api/public/jobs/sync-chain'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -82,6 +83,11 @@ const ApiOauthXReturnRoute = ApiOauthXReturnRouteImport.update({
   path: '/api/oauth/x/return',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicJobsSyncChainRoute = ApiPublicJobsSyncChainRouteImport.update({
+  id: '/api/public/jobs/sync-chain',
+  path: '/api/public/jobs/sync-chain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/admin/faucet': typeof AdminFaucetRoute
   '/token/$symbol': typeof TokenSymbolRoute
   '/api/oauth/x/return': typeof ApiOauthXReturnRoute
+  '/api/public/jobs/sync-chain': typeof ApiPublicJobsSyncChainRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/admin/faucet': typeof AdminFaucetRoute
   '/token/$symbol': typeof TokenSymbolRoute
   '/api/oauth/x/return': typeof ApiOauthXReturnRoute
+  '/api/public/jobs/sync-chain': typeof ApiPublicJobsSyncChainRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/admin/faucet': typeof AdminFaucetRoute
   '/token/$symbol': typeof TokenSymbolRoute
   '/api/oauth/x/return': typeof ApiOauthXReturnRoute
+  '/api/public/jobs/sync-chain': typeof ApiPublicJobsSyncChainRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/admin/faucet'
     | '/token/$symbol'
     | '/api/oauth/x/return'
+    | '/api/public/jobs/sync-chain'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/admin/faucet'
     | '/token/$symbol'
     | '/api/oauth/x/return'
+    | '/api/public/jobs/sync-chain'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/admin/faucet'
     | '/token/$symbol'
     | '/api/oauth/x/return'
+    | '/api/public/jobs/sync-chain'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -183,6 +195,7 @@ export interface RootRouteChildren {
   TrendingRoute: typeof TrendingRoute
   TokenSymbolRoute: typeof TokenSymbolRoute
   ApiOauthXReturnRoute: typeof ApiOauthXReturnRoute
+  ApiPublicJobsSyncChainRoute: typeof ApiPublicJobsSyncChainRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOauthXReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/sync-chain': {
+      id: '/api/public/jobs/sync-chain'
+      path: '/api/public/jobs/sync-chain'
+      fullPath: '/api/public/jobs/sync-chain'
+      preLoaderRoute: typeof ApiPublicJobsSyncChainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -296,6 +316,7 @@ const rootRouteChildren: RootRouteChildren = {
   TrendingRoute: TrendingRoute,
   TokenSymbolRoute: TokenSymbolRoute,
   ApiOauthXReturnRoute: ApiOauthXReturnRoute,
+  ApiPublicJobsSyncChainRoute: ApiPublicJobsSyncChainRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

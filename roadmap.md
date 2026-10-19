@@ -1,5 +1,9 @@
 # ORVEX improvements
 
+- [x] Reduce visitor-triggered chain loading with authenticated minute scheduling, bounded rotating factory discovery, oldest-checkpoint scans, six-slot RPC reads and debounced Explore searches; production throughput is not certified.
+- [x] Add synchronous launch/trade guards, receipt-aware pending-launch recovery, fresh launch balance checks, logo cleanup and explicit chart locale; 23 regression tests and eight public pages checked.
+- [ ] Verify managed synchronization after publishing the new callback — schedule created; production execution cannot be verified before that callback is published.
+
 - [x] Read live native zkLTC and ERC20 balances in the token Buy/Sell form; verify both through real RPC using a read-only public account, refresh, exact Max and account-isolation tests. Signed transactions remain unverified without a signing wallet.
 - [x] Remove the window volume/price-change charts from Trending only; retain time-range rankings and verify in the browser.
 
@@ -7,10 +11,10 @@
 - [ ] Verify X connect popup and quest verification end-to-end — blocked by no real X account consent in the test browser.
 - [ ] Verify faucet claim/deposit/withdraw with the owner wallet — blocked by no connected funded signing wallet.
 
-- [ ] Enforce logo upload size at selection, server and storage.
-- [ ] Add incremental token and pool loading with bounded chain requests.
+- [x] Enforce logo upload size at selection, server and storage; existing validation regression tests pass.
+- [x] Add incremental token and pool loading with bounded chain requests; pagination regression tests pass.
 - [ ] Implement DEX add/remove liquidity, confirmation and transaction status; show token-picker balances.
-- [ ] Verify new limits, pagination and liquidity safety with tests and live UI checks.
+- [x] Verify new limits, pagination and liquidity safety with tests and public UI checks; signed LP operations remain unverified as noted below.
 
 - [x] Remove Explore Window label and emphasize market cap on token cards.
 - [x] Separate DEX Swap/Liquidity/Pools navigation and add uploaded ORVX logo.

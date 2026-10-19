@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LayoutGrid, List, Search, X, Compass } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,10 @@ export const Route = createFileRoute("/explore")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureInfiniteQueryData(tokenPagesQuery()),
+  loaderDeps: ({ search }) => ({ q: search.q ?? "", stage: search.stage ?? "all" }),
+  loader: ({ context, deps }) => context.queryClient.ensureInfiniteQueryData(
+    tokenPagesQuery(deps.q, deps.stage as "all" | "curve" | "graduated" | "favorites"),
+  ),
   pendingComponent: () => (
     <div className="token-grid">
       {Array.from({ length: 12 }, (_, i) => (
@@ -83,6 +86,15 @@ function Explore() {
     win: search.win ?? "24h",
   };
   const navigate = Route.useNavigate();
+  const [searchInput, setSearchInput] = useState(s.q);
+  useEffect(() => { setSearchInput(s.q); }, [s.q]);
+  useEffect(() => {
+    if (searchInput === s.q) return;
+    const timer = setTimeout(() => {
+      void navigate({ search: (old) => ({ ...old, q: searchInput }), replace: true });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput, s.q, navigate]);
   const { favorites } = useWatchlist();
   const pages = useInfiniteQuery(tokenPagesQuery(s.q, s.stage as "all" | "curve" | "graduated" | "favorites", favorites));
   const data = useMemo(() => [...new Map((pages.data?.pages.flatMap((p) => p.tokens) ?? []).map((t) => [t.id, t])).values()], [pages.data]);
@@ -133,18 +145,18 @@ function Explore() {
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             aria-label="Search tokens"
-            value={s.q}
-            onChange={(e) => update({ q: e.target.value })}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search name, symbol or address"
             className="pl-9 pr-9"
           />
-          {s.q && (
+          {searchInput && (
             <Button
               variant="ghost"
               size="icon"
               className="absolute right-0 top-0"
               aria-label="Clear search"
-              onClick={() => update({ q: "" })}
+              onClick={() => { setSearchInput(""); void update({ q: "" }); }}
             >
               <X />
             </Button>

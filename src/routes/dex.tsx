@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { createSubmissionLock } from "@/lib/submission-lock";
 import { formatUnits, type Address } from "viem";
 import {
   ArrowDownUp,
@@ -77,6 +78,7 @@ const Logo = ({ t, size = 28 }: { t: DexToken; size?: number }) =>
 function Dex() {
   const { address, open } = useWallet();
   const qc = useQueryClient();
+  const submissionLock = useRef(createSubmissionLock());
   const [view, setView] = useState("swap");
   const [selectedPosition, setSelectedPosition] = useState<{a: DexToken; b: DexToken} | null>(null);
   const [from, setFrom] = useState<DexToken>(
@@ -148,6 +150,7 @@ function Dex() {
   };
   const submit = async () => {
     if (!address || !quote || amt !== debounced || isFetching || busy) return;
+    if (!submissionLock.current.acquire()) return;
     setBusy(true);
     try {
       const pc = publicClient();
@@ -187,6 +190,7 @@ function Dex() {
     } catch (e) {
       toast.error(walletError(e));
     } finally {
+      submissionLock.current.release();
       setBusy(false);
     }
   };

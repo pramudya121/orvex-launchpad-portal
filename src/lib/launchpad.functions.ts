@@ -85,17 +85,6 @@ function publicClient() {
   });
 }
 
-/** Pulls fresh on-chain state (throttled). Failures never block reads. */
-async function sync(force = false) {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { syncChain } = await import("./chain.server");
-    await syncChain(supabaseAdmin, force);
-  } catch (e) {
-    console.error("chain sync failed", e);
-  }
-}
-
 const reservesOf = (t: TokenRow): Reserves => ({
   virtualBase: Number(t.virtual_base),
   virtualToken: Number(t.virtual_token),
@@ -181,7 +170,6 @@ function toView(t: TokenRow, trades: TradeView[], stats?: MarketStats): TokenVie
 
 export const listTokens = createServerFn({ method: "GET" }).handler(
   async (): Promise<TokenView[]> => {
-    await sync();
     const sb = publicClient();
     const { data: tokens, error } = await sb
       .from("tokens")
@@ -206,7 +194,6 @@ export const listTokenPage = createServerFn({ method: "GET" })
     favorites: z.array(z.string().uuid()).max(1000).default([]),
   }).parse(d))
   .handler(async ({ data }) => {
-    if (!data.cursor) await sync();
     const sb = publicClient();
     let query = sb.from("tokens").select("*").eq("onchain", true);
     if (data.stage === "curve" || data.stage === "graduated") query = query.eq("graduated", data.stage === "graduated");
@@ -230,7 +217,6 @@ export const getTokenDetail = createServerFn({ method: "GET" })
     z.object({ symbol: z.string().min(1).max(16) }).parse(d),
   )
   .handler(async ({ data }) => {
-    await sync();
     const sb = publicClient();
     const { data: t, error: tokenError } = await sb
       .from("tokens")
@@ -283,7 +269,10 @@ export const uploadLogo = createServerFn({ method: "POST" })
     const signed = await supabaseAdmin.storage
       .from("token-logos")
       .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-    if (signed.error || !signed.data?.signedUrl) return { error: "Logo link could not be created" };
+    if (signed.error || !signed.data?.signedUrl) {
+      await supabaseAdmin.storage.from("token-logos").remove([path]);
+      return { error: "Logo link could not be created" };
+    }
     return { url: signed.data?.signedUrl ?? null };
   });
 
@@ -320,7 +309,6 @@ export const indexTx = createServerFn({ method: "POST" })
 export const getPortfolio = createServerFn({ method: "GET" })
   .inputValidator((d: { address: string }) => z.object({ address: addr }).parse(d))
   .handler(async ({ data }) => {
-    await sync();
     const sb = publicClient();
     const a = data.address.toLowerCase();
     const { data: tokens, error: tokensError } = await sb
@@ -380,7 +368,6 @@ export const getPortfolio = createServerFn({ method: "GET" })
 
 /** Leaderboard computed from indexed on-chain trades. */
 export const getLeaderboard = createServerFn({ method: "GET" }).handler(async () => {
-  await sync();
   const sb = publicClient();
   const { data: tokens, error: tokensError } = await sb
     .from("tokens")

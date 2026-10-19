@@ -11,7 +11,8 @@
 
 # ORVEX — architecture rules
 
-- Database migration history is project-local; after remix, start from an empty baseline managed by the migration tool rather than replaying the source project's migrations, so copied schema and seed changes cannot run against the new database.
+- Remix migrations start with a tool-managed empty baseline; never replay copied history against the new database.
+- Router hydration transfers the request-scoped Query cache so initial market rows match server rendering.
 
 - Display-only bonding-curve estimates live in `src/lib/curve.ts`; transaction amounts and slippage use integer units and fresh deployed-contract quotes, so floating-point previews cannot weaken transaction bounds.
 - Token trade forms read native and ERC20 balances directly with account/chain/asset-scoped queries and exact integer sell presets, so portfolio indexing and rounding cannot misstate spendable funds.
@@ -21,6 +22,9 @@
 - Market lists share URL-based filters, a local watchlist provider and shared query invalidation; polling is a fallback to database Realtime, because event delivery and chain confirmation cannot be assumed instantaneous.
 - Chain indexing reconciles factory entries by address and advances bounded durable event checkpoints only after successful writes, so outages cannot silently skip historical events.
 - Chain indexing acquires a service-role-only expiring database lease and uses conditional curve checkpoint writes, so concurrent polling cannot regress scan progress; workers stop within a bounded execution budget.
+- Public market reads serve indexed state without waiting for global chain scans; an authenticated managed schedule owns bounded synchronization so visitor traffic cannot amplify RPC scanning.
+- Factory discovery uses a durable rotating cursor and curve scans prioritize the oldest checkpoint with bounded direct RPC reads, so large launch counts cannot starve later tokens.
+- Wallet transaction entry points use synchronous submission locks in addition to disabled controls, so rapid repeated clicks cannot submit duplicate transactions.
 - Pending token launch hashes and metadata survive refresh in session storage from wallet submission until successful indexing, so confirmation delays cannot cause repeat deployment fees.
 - Wallet writes revalidate chain and account; DEX quotes and balances identify assets by address, validate routes and token precision before submission, so symbols and stale quotes cannot redirect trades.
 - Chain reads use direct RPC calls rather than the configured multicall contract, because that address currently reverts on LiteForge.
