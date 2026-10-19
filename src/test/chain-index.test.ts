@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { findLaunchBlock, scanWindow } from "../lib/chain-index";
+import { factoryDiscoveryPage, findLaunchBlock, scanWindow } from "../lib/chain-index";
 
 describe("chain history checkpoints", () => {
+  it("bounds factory discovery and resumes after the first page", () => {
+    expect(factoryDiscoveryPage(0, 1000).indexes).toEqual(Array.from({ length: 12 }, (_, i) => i));
+    expect(factoryDiscoveryPage(12, 1000).indexes[0]).toBe(12);
+    expect(factoryDiscoveryPage(996, 1000)).toEqual({ indexes: [996, 997, 998, 999], next: 0 });
+    expect(factoryDiscoveryPage(0, 0)).toEqual({ indexes: [], next: 0 });
+  });
   it("starts at deployment rather than scanning millions of pre-launch blocks", () => {
     expect(scanWindow(0n, 62_000_000n, 62_020_000n)).toEqual({ from: 62_000_000n, end: 62_009_000n });
   });
