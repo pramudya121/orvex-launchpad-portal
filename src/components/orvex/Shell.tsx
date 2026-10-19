@@ -36,11 +36,11 @@ const NAV = [
   { to: "/", label: "Home", icon: Home },
   { to: "/explore", label: "Explore", icon: Compass },
   { to: "/trending", label: "Trending", icon: Flame },
+  { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { to: "/create", label: "Create", icon: Plus },
   { to: "/dex", label: "DEX", icon: ArrowLeftRight },
-  { to: "/faucet", label: "Faucet", icon: Droplets },
-  { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { to: "/portfolio", label: "Portfolio", icon: PieChart },
+  { to: "/faucet", label: "Faucet", icon: Droplets },
   { to: "/admin", label: "Admin", icon: ShieldCheck },
 ] as const;
 
