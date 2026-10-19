@@ -14,6 +14,7 @@
 - Database migration history is project-local; after remix, start from an empty baseline managed by the migration tool rather than replaying the source project's migrations, so copied schema and seed changes cannot run against the new database.
 
 - Display-only bonding-curve estimates live in `src/lib/curve.ts`; transaction amounts and slippage use integer units and fresh deployed-contract quotes, so floating-point previews cannot weaken transaction bounds.
+- Token trade forms read native and ERC20 balances directly with account/chain/asset-scoped queries and exact integer sell presets, so portfolio indexing and rounding cannot misstate spendable funds.
 - Token creation, trade writes, logo uploads and signed logo URLs go through server functions against the service-role client; the database has no public INSERT/UPDATE policies, so curve math can't be faked from the client.
 - Charts are built client-side by aggregating real `token_trades` rows (`buildCandles` in `src/lib/tokens.ts`); the `1m` timeframe is the live feed view.
 - The active UI uses an injected wallet and deployed LitVM contracts; confirmed receipt events supply launch addresses and server indexing deduplicates trades by `(tx_hash, log_index)` so simulation races and multiple events cannot corrupt the index.

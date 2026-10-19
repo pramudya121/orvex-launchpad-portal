@@ -1,5 +1,8 @@
 # ORVEX improvements
 
+- [x] Read live native zkLTC and ERC20 balances in the token Buy/Sell form; verify both through real RPC using a read-only public account, refresh, exact Max and account-isolation tests. Signed transactions remain unverified without a signing wallet.
+- [x] Remove the window volume/price-change charts from Trending only; retain time-range rankings and verify in the browser.
+
 - [x] Build zkLTC Faucet page (LitVMFaucet contract), X App User Connector quests with server-side verification, signature-gated Faucet Admin (funds, ownership, quest CRUD); verified both pages render.
 - [ ] Verify X connect popup and quest verification end-to-end — blocked by no real X account consent in the test browser.
 - [ ] Verify faucet claim/deposit/withdraw with the owner wallet — blocked by no connected funded signing wallet.
