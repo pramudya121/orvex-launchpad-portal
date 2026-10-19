@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseEther } from "viem";
+import { QueryClient } from "@tanstack/react-query";
 
 vi.mock("../lib/web3/actions", () => ({ tokenBalance: vi.fn() }));
 import { tokenBalance } from "../lib/web3/actions";
@@ -12,12 +13,12 @@ describe("token trade balances", () => {
   it("reads native zkLTC directly for Buy", async () => {
     vi.mocked(tokenBalance).mockResolvedValueOnce(parseEther("1.25"));
     const query = tradeBalanceQuery(account, null);
-    expect(await query.queryFn()).toBe(parseEther("1.25"));
+    expect(await new QueryClient().fetchQuery(query)).toBe(parseEther("1.25"));
     expect(tokenBalance).toHaveBeenLastCalledWith(account, null);
   });
   it("reads the selected ERC20 directly for Sell", async () => {
     vi.mocked(tokenBalance).mockResolvedValueOnce(parseEther("123.456"));
-    expect(await tradeBalanceQuery(account, token).queryFn()).toBe(parseEther("123.456"));
+    expect(await new QueryClient().fetchQuery(tradeBalanceQuery(account, token))).toBe(parseEther("123.456"));
     expect(tokenBalance).toHaveBeenLastCalledWith(account, token);
   });
   it("isolates wallet accounts and assets and disables disconnected reads", () => {
