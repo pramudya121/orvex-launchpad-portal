@@ -1,5 +1,8 @@
 # ORVEX improvements
 
+- [ ] Reduce repeated market loading and keep live updates bounded for many visitors.
+- [ ] Harden launch/trade recovery and fix chart reliability; verify central public and wallet-read flows.
+
 - [x] Read live native zkLTC and ERC20 balances in the token Buy/Sell form; verify both through real RPC using a read-only public account, refresh, exact Max and account-isolation tests. Signed transactions remain unverified without a signing wallet.
 - [x] Remove the window volume/price-change charts from Trending only; retain time-range rankings and verify in the browser.
 
