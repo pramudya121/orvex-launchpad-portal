@@ -53,7 +53,10 @@ export const Route = createFileRoute("/explore")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureInfiniteQueryData(tokenPagesQuery()),
+  loaderDeps: ({ search }) => ({ q: search.q ?? "", stage: search.stage ?? "all" }),
+  loader: ({ context, deps }) => context.queryClient.ensureInfiniteQueryData(
+    tokenPagesQuery(deps.q, deps.stage as "all" | "curve" | "graduated" | "favorites"),
+  ),
   pendingComponent: () => (
     <div className="token-grid">
       {Array.from({ length: 12 }, (_, i) => (

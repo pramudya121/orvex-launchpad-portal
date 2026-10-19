@@ -2,7 +2,7 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { getLeaderboard, getPortfolio, getTokenDetail, listTokens, listTokenPage, listLiveTrades } from "./launchpad.functions";
 
 export const tokenPagesQuery = (q = "", stage: "all" | "curve" | "graduated" | "favorites" = "all", favorites: string[] = []) => infiniteQueryOptions({
-  queryKey: ["tokens", "pages", q, stage, favorites],
+  queryKey: ["tokens", "pages", q, stage, stage === "favorites" ? favorites : []],
   initialPageParam: null as { createdAt: string; id: string } | null,
   queryFn: ({ pageParam }) => listTokenPage({ data: { cursor: pageParam, q, stage, favorites } }),
   getNextPageParam: (page) => page.nextCursor ?? undefined,
