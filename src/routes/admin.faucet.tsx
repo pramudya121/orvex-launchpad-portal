@@ -310,7 +310,7 @@ function QuestsPanel({
 
   const toggle = (q: FaucetQuest) =>
     run(q.id, async () => {
-      const quest = { ...q, active: !q.active };
+      const quest = { ...q, description: q.description ?? undefined, active: !q.active };
       await signed("saveQuest", quest, (signature, message) =>
         adminSaveQuest({ data: { address, signature, message, quest } }),
       );

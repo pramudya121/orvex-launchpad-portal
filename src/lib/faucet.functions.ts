@@ -2,7 +2,8 @@
 // quest verification against the X API, and signature-gated quest admin.
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { createClient, type Address, createPublicClient, getAddress, http, isAddress, verifyMessage } from "viem";
+import { type Address, createPublicClient, getAddress, http, isAddress, verifyMessage } from "viem";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import {
   appUserReconnectRequired,
   authorizeAppUserOAuth,
@@ -30,7 +31,7 @@ function validWallet(input: unknown): string {
 
 function publicReadClient() {
   const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-  return createClient<Database>(process.env["SUPABASE_URL"]!, key, {
+  return createSupabaseClient<Database>(process.env["SUPABASE_URL"]!, key, {
     auth: { persistSession: false },
     global: {
       fetch: (input, init) => {
@@ -56,7 +57,7 @@ export type FaucetQuest = {
 // ---------------- Quests (public read) ----------------
 
 export const listFaucetQuests = createServerFn({ method: "GET" })
-  .inputValidator((input?: { wallet?: string }) => input ?? {})
+  .inputValidator((input?: { wallet?: string | undefined }) => input ?? {})
   .handler(async ({ data }) => {
     const db = publicReadClient();
     const { data: quests, error } = await db
@@ -98,7 +99,7 @@ export const startXConnect = createServerFn({ method: "POST" })
       appUserId: wallet,
       clientAPIKey: clientKey,
       returnUrl,
-      connectionAPIKey: connectionAPIKey ?? undefined,
+      ...(connectionAPIKey ? { connectionAPIKey } : {}),
       credentialsConfiguration: { scopes: X_SCOPES },
     });
     return { authorizationUrl };
