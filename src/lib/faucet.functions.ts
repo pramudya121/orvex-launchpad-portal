@@ -250,13 +250,13 @@ export const verifyFaucetQuests = createServerFn({ method: "POST" })
 // ---------------- Quest admin (faucet-owner signature gated) ----------------
 
 type QuestInput = {
-  id?: string;
+  id?: string | undefined;
   title: string;
-  description?: string;
+  description?: string | undefined;
   kind: "follow" | "like" | "retweet" | "visit";
   target: string;
-  active?: boolean;
-  position?: number;
+  active?: boolean | undefined;
+  position?: number | undefined;
 };
 
 async function requireFaucetOwner(address: string, signature: string, message: string) {
