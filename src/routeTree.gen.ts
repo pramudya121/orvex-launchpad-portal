@@ -14,10 +14,13 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as DexRouteImport } from './routes/dex'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as FaucetRouteImport } from './routes/faucet'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as TrendingRouteImport } from './routes/trending'
+import { Route as AdminFaucetRouteImport } from './routes/admin.faucet'
 import { Route as TokenSymbolRouteImport } from './routes/token.$symbol'
+import { Route as ApiOauthXReturnRouteImport } from './routes/api/oauth/x/return'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -44,6 +47,11 @@ const ExploreRoute = ExploreRouteImport.update({
   path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FaucetRoute = FaucetRouteImport.update({
+  id: '/faucet',
+  path: '/faucet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
@@ -59,45 +67,64 @@ const TrendingRoute = TrendingRouteImport.update({
   path: '/trending',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminFaucetRoute = AdminFaucetRouteImport.update({
+  id: '/faucet',
+  path: '/faucet',
+  getParentRoute: () => AdminRoute,
+} as any)
 const TokenSymbolRoute = TokenSymbolRouteImport.update({
   id: '/token/$symbol',
   path: '/token/$symbol',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOauthXReturnRoute = ApiOauthXReturnRouteImport.update({
+  id: '/api/oauth/x/return',
+  path: '/api/oauth/x/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/create': typeof CreateRoute
   '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/faucet': typeof FaucetRoute
   '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
+  '/admin/faucet': typeof AdminFaucetRoute
   '/token/$symbol': typeof TokenSymbolRoute
+  '/api/oauth/x/return': typeof ApiOauthXReturnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/create': typeof CreateRoute
   '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/faucet': typeof FaucetRoute
   '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
+  '/admin/faucet': typeof AdminFaucetRoute
   '/token/$symbol': typeof TokenSymbolRoute
+  '/api/oauth/x/return': typeof ApiOauthXReturnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/create': typeof CreateRoute
   '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/faucet': typeof FaucetRoute
   '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
+  '/admin/faucet': typeof AdminFaucetRoute
   '/token/$symbol': typeof TokenSymbolRoute
+  '/api/oauth/x/return': typeof ApiOauthXReturnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,10 +134,13 @@ export interface FileRouteTypes {
     | '/create'
     | '/dex'
     | '/explore'
+    | '/faucet'
     | '/leaderboard'
     | '/portfolio'
     | '/trending'
+    | '/admin/faucet'
     | '/token/$symbol'
+    | '/api/oauth/x/return'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -118,10 +148,13 @@ export interface FileRouteTypes {
     | '/create'
     | '/dex'
     | '/explore'
+    | '/faucet'
     | '/leaderboard'
     | '/portfolio'
     | '/trending'
+    | '/admin/faucet'
     | '/token/$symbol'
+    | '/api/oauth/x/return'
   id:
     | '__root__'
     | '/'
@@ -129,22 +162,27 @@ export interface FileRouteTypes {
     | '/create'
     | '/dex'
     | '/explore'
+    | '/faucet'
     | '/leaderboard'
     | '/portfolio'
     | '/trending'
+    | '/admin/faucet'
     | '/token/$symbol'
+    | '/api/oauth/x/return'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CreateRoute: typeof CreateRoute
   DexRoute: typeof DexRoute
   ExploreRoute: typeof ExploreRoute
+  FaucetRoute: typeof FaucetRoute
   LeaderboardRoute: typeof LeaderboardRoute
   PortfolioRoute: typeof PortfolioRoute
   TrendingRoute: typeof TrendingRoute
   TokenSymbolRoute: typeof TokenSymbolRoute
+  ApiOauthXReturnRoute: typeof ApiOauthXReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,6 +222,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/faucet': {
+      id: '/faucet'
+      path: '/faucet'
+      fullPath: '/faucet'
+      preLoaderRoute: typeof FaucetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/leaderboard': {
       id: '/leaderboard'
       path: '/leaderboard'
@@ -205,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrendingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/faucet': {
+      id: '/admin/faucet'
+      path: '/faucet'
+      fullPath: '/admin/faucet'
+      preLoaderRoute: typeof AdminFaucetRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/token/$symbol': {
       id: '/token/$symbol'
       path: '/token/$symbol'
@@ -212,19 +264,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TokenSymbolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/oauth/x/return': {
+      id: '/api/oauth/x/return'
+      path: '/api/oauth/x/return'
+      fullPath: '/api/oauth/x/return'
+      preLoaderRoute: typeof ApiOauthXReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminFaucetRoute: typeof AdminFaucetRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminFaucetRoute: AdminFaucetRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   CreateRoute: CreateRoute,
   DexRoute: DexRoute,
   ExploreRoute: ExploreRoute,
+  FaucetRoute: FaucetRoute,
   LeaderboardRoute: LeaderboardRoute,
   PortfolioRoute: PortfolioRoute,
   TrendingRoute: TrendingRoute,
   TokenSymbolRoute: TokenSymbolRoute,
+  ApiOauthXReturnRoute: ApiOauthXReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

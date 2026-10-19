@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_user_connections: {
+        Row: {
+          connection_key_ciphertext: string
+          connector_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_key_ciphertext: string
+          connector_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_key_ciphertext?: string
+          connector_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chain_sync: {
         Row: {
           id: string
@@ -35,6 +62,68 @@ export type Database = {
           lease_id?: string | null
           lease_until?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      faucet_quest_completions: {
+        Row: {
+          id: string
+          quest_id: string
+          verified_at: string
+          wallet: string
+        }
+        Insert: {
+          id?: string
+          quest_id: string
+          verified_at?: string
+          wallet: string
+        }
+        Update: {
+          id?: string
+          quest_id?: string
+          verified_at?: string
+          wallet?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faucet_quest_completions_quest_id_fkey"
+            columns: ["quest_id"]
+            isOneToOne: false
+            referencedRelation: "faucet_quests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faucet_quests: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          position: number
+          target: string
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind: string
+          position?: number
+          target: string
+          title: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          position?: number
+          target?: string
+          title?: string
         }
         Relationships: []
       }

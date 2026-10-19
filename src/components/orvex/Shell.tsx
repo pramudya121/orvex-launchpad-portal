@@ -11,6 +11,7 @@ import {
   Trophy,
   ArrowLeftRight,
   ShieldCheck,
+  Droplets,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiveTicker } from "@/components/orvex/LiveTicker";
@@ -37,6 +38,7 @@ const NAV = [
   { to: "/trending", label: "Trending", icon: Flame },
   { to: "/create", label: "Create", icon: Plus },
   { to: "/dex", label: "DEX", icon: ArrowLeftRight },
+  { to: "/faucet", label: "Faucet", icon: Droplets },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { to: "/portfolio", label: "Portfolio", icon: PieChart },
   { to: "/admin", label: "Admin", icon: ShieldCheck },
@@ -134,7 +136,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </footer>
 
       <nav
-        className={`fixed inset-x-0 bottom-0 z-40 grid ${isOwner ? "grid-cols-8" : "grid-cols-7"} border-t border-border bg-background/90 backdrop-blur-xl lg:hidden`}
+        className={`fixed inset-x-0 bottom-0 z-40 grid ${isOwner ? "grid-cols-9" : "grid-cols-8"} border-t border-border bg-background/90 backdrop-blur-xl lg:hidden`}
       >
         {visibleNav.map((n) => (
           <Link
