@@ -2,7 +2,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Heart, Share2, Loader2 } from "lucide-react";
+import { Copy, Heart, Share2, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { fmtUsd, fmtNum, fmtAge, short } from "@/lib/tokens";
-import { tokenQuery, portfolioQuery } from "@/lib/queries";
+import { tokenQuery } from "@/lib/queries";
 import { indexTx, type TokenView } from "@/lib/launchpad.functions";
-import type { Address } from "viem";
+import { formatUnits, type Address } from "viem";
+import { tradeBalanceQuery, sellBalancePreset, tradeBalanceError } from "@/lib/web3/trade-balances";
 import { antiBotCheck, buyOnchain, sellOnchain, walletError } from "@/lib/web3/actions";
 import { explorerTx, explorerAddress } from "@/lib/web3/chain";
 import { CURVE, quoteBuy, quoteSell } from "@/lib/curve";
@@ -296,11 +297,17 @@ function SwapPanel({ t }: { t: TokenView }) {
   const [amt, setAmt] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const { data: pf } = useQuery({
-    ...portfolioQuery(address ?? "0x0000000000000000000000000000000000000000"),
-    enabled: !!address,
-  });
-  const balance = pf?.holdings.find((h) => h.token.id === t.id)?.balance ?? 0;
+  const nativeBalance = useQuery(tradeBalanceQuery(address, null));
+  const tokenBalance = useQuery(tradeBalanceQuery(address, t.address as Address));
+  const activeBalance = side === "buy" ? nativeBalance : tokenBalance;
+  const balance = activeBalance.isError ? undefined : activeBalance.data;
+  const inUnit = side === "buy" ? "zkLTC" : t.symbol;
+  const balanceText = balance === undefined ? null : formatUnits(balance, 18);
+
+  useEffect(() => {
+    setAmt("");
+    setConfirm(false);
+  }, [address, t.address]);
 
   const n = Number(amt);
   const quote = useMemo(() => {
@@ -314,8 +321,8 @@ function SwapPanel({ t }: { t: TokenView }) {
   const err =
     quote && "error" in quote
       ? quote.error
-      : side === "sell" && n > balance + 1e-9
-        ? "Insufficient balance"
+      : address && n > 0 && tradeBalanceError(amt, balance, inUnit)
+        ? tradeBalanceError(amt, balance, inUnit)
         : side === "buy" && t.maxBuy && n > t.maxBuy
           ? `Max buy is ${t.maxBuy} zkLTC per transaction`
           : !t.curveAddress
@@ -324,9 +331,14 @@ function SwapPanel({ t }: { t: TokenView }) {
   const q = quote && !("error" in quote) ? quote : null;
 
   const submit = async () => {
-    if (!address || !q || !t.curveAddress || busy) return;
+    if (!address || !q || !t.curveAddress || busy || err) return;
     setBusy(true);
     try {
+      const freshBalance = await qc.fetchQuery(
+        tradeBalanceQuery(address, side === "buy" ? null : t.address as Address),
+      );
+      const balanceError = tradeBalanceError(amt, freshBalance, inUnit);
+      if (balanceError) throw new Error(balanceError);
       if (side === "buy" && !(await antiBotCheck(address, n))) {
         toast.error("Blocked by anti-bot protection", {
           description:
@@ -361,6 +373,7 @@ function SwapPanel({ t }: { t: TokenView }) {
       qc.invalidateQueries({ queryKey: ["token"] });
       qc.invalidateQueries({ queryKey: ["tokens"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
+      qc.invalidateQueries({ queryKey: ["trade-balance"] });
     } catch (e) {
       toast.error(walletError(e));
     } finally {
@@ -368,13 +381,12 @@ function SwapPanel({ t }: { t: TokenView }) {
     }
   };
 
-  const inUnit = side === "buy" ? "zkLTC" : t.symbol;
   const outUnit = side === "buy" ? t.symbol : "zkLTC";
   const out = q ? (side === "buy" ? q.tokenAmount : q.baseAmount) : 0;
   const presets =
     side === "buy"
       ? ["0.1", "0.5", "1", "5"]
-      : [0.25, 0.5, 1].map((p) => String(+(balance * p).toFixed(2)));
+      : ([25, 50, 100] as const).map((p) => sellBalancePreset(tokenBalance.data ?? 0n, p));
 
   return (
     <div className="glass rounded-2xl p-5">
@@ -384,8 +396,9 @@ function SwapPanel({ t }: { t: TokenView }) {
       </div>
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-surface p-1">
         {(["buy", "sell"] as const).map((s) => (
-          <button
+          <Button
             key={s}
+            variant="ghost"
             onClick={() => {
               navigate({ search: { side: s }, replace: true });
               setAmt("");
@@ -400,13 +413,23 @@ function SwapPanel({ t }: { t: TokenView }) {
             )}
           >
             {s}
-          </button>
+          </Button>
         ))}
       </div>
-      <div className="mt-4 flex justify-between text-xs text-muted-foreground">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>You pay ({inUnit})</span>
-        {side === "sell" && <span>Balance: {fmtNum(balance)}</span>}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span title={balanceText ?? undefined} aria-label={`${inUnit} balance`} className="break-all font-mono">
+            Balance: {!address ? "—" : activeBalance.isPending ? "Loading…" : balanceText === null ? "Unavailable" : `${Number(balanceText) > 0 && Number(balanceText) < 0.00000001 ? "<0.00000001" : Number(balanceText).toLocaleString("en-US", { maximumFractionDigits: 8 })} ${inUnit}`}
+          </span>
+          {address && (
+            <Button variant="ghost" size="icon" className="size-6 shrink-0" aria-label="Refresh balance" title="Refresh balance" disabled={activeBalance.isFetching} onClick={() => { void activeBalance.refetch(); }}>
+              <RefreshCw className={cn("size-3", activeBalance.isFetching && "animate-spin")} />
+            </Button>
+          )}
+        </div>
       </div>
+      {address && activeBalance.isError && <p className="mt-1 text-xs text-danger">Could not read wallet balance. Retry the balance refresh.</p>}
       <Input
         type="number"
         min="0"
@@ -418,13 +441,16 @@ function SwapPanel({ t }: { t: TokenView }) {
       />
       <div className="mt-2 flex gap-1.5">
         {presets.map((v, i) => (
-          <button
+          <Button
             key={i}
+            variant="secondary"
+            size="sm"
+            disabled={t.graduated || (side === "sell" && (!address || tokenBalance.isError || tokenBalance.data === undefined))}
             onClick={() => setAmt(v)}
             className="rounded-md bg-surface px-2 py-1 font-mono text-xs text-muted-foreground hover:text-foreground"
           >
             {side === "buy" ? v : ["25%", "50%", "Max"][i]}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="mt-4 space-y-1.5 rounded-xl bg-surface/60 p-3 text-sm">
@@ -459,7 +485,7 @@ function SwapPanel({ t }: { t: TokenView }) {
       </div>
       <Button
         className="mt-4 h-11 w-full bg-gradient-primary shadow-glow"
-        disabled={t.graduated || busy || (!!address && (!q || !!err))}
+        disabled={t.graduated || busy || (!!address && (!q || !!err || balance === undefined))}
         onClick={() => (address ? setConfirm(true) : open())}
       >
         {busy ? (
@@ -488,7 +514,7 @@ function SwapPanel({ t }: { t: TokenView }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={submit}>Confirm</AlertDialogAction>
+            <AlertDialogAction disabled={busy || !!err || balance === undefined} onClick={submit}>Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

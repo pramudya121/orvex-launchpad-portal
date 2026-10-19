@@ -7,7 +7,7 @@ import { tokensQuery } from "@/lib/queries";
 import type { TokenView } from "@/lib/launchpad.functions";
 import { windowChange, windowVolume } from "@/lib/market";
 import { fmtUsd, fmtNum } from "@/lib/tokens";
-import { WindowChart, LiveControls, RankCard, pct, type RankWindow } from "@/components/orvex/RankBoard";
+import { LiveControls, RankCard, pct, type RankWindow } from "@/components/orvex/RankBoard";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/trending")({
@@ -95,7 +95,6 @@ function Trending() {
         <LiveControls win={win} setWin={setWin} />
       </header>
 
-      <WindowChart tokens={data} win={win} setWin={setWin} change={windowChange} volume={windowVolume} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1">
           {cfg.map((c) => (
