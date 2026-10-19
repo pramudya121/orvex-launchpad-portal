@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as DexRouteImport } from './routes/dex'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as FaucetRouteImport } from './routes/faucet'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as TrendingRouteImport } from './routes/trending'
@@ -43,6 +44,11 @@ const DexRoute = DexRouteImport.update({
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaucetRoute = FaucetRouteImport.update({
+  id: '/faucet',
+  path: '/faucet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/create': typeof CreateRoute
   '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/faucet': typeof FaucetRoute
   '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/create': typeof CreateRoute
   '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/faucet': typeof FaucetRoute
   '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/create': typeof CreateRoute
   '/dex': typeof DexRoute
   '/explore': typeof ExploreRoute
+  '/faucet': typeof FaucetRoute
   '/leaderboard': typeof LeaderboardRoute
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/create'
     | '/dex'
     | '/explore'
+    | '/faucet'
     | '/leaderboard'
     | '/portfolio'
     | '/trending'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/create'
     | '/dex'
     | '/explore'
+    | '/faucet'
     | '/leaderboard'
     | '/portfolio'
     | '/trending'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/create'
     | '/dex'
     | '/explore'
+    | '/faucet'
     | '/leaderboard'
     | '/portfolio'
     | '/trending'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   CreateRoute: typeof CreateRoute
   DexRoute: typeof DexRoute
   ExploreRoute: typeof ExploreRoute
+  FaucetRoute: typeof FaucetRoute
   LeaderboardRoute: typeof LeaderboardRoute
   PortfolioRoute: typeof PortfolioRoute
   TrendingRoute: typeof TrendingRoute
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/explore'
       fullPath: '/explore'
       preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faucet': {
+      id: '/faucet'
+      path: '/faucet'
+      fullPath: '/faucet'
+      preLoaderRoute: typeof FaucetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leaderboard': {
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreateRoute: CreateRoute,
   DexRoute: DexRoute,
   ExploreRoute: ExploreRoute,
+  FaucetRoute: FaucetRoute,
   LeaderboardRoute: LeaderboardRoute,
   PortfolioRoute: PortfolioRoute,
   TrendingRoute: TrendingRoute,
