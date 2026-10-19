@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { formatEther, isAddress, type Address } from "viem";
@@ -61,6 +61,9 @@ const stateQuery = () => ({
 function Admin() {
   const { address, open } = useWallet();
   const access = useOwnerAccess();
+  // Child admin pages (e.g. /admin/faucet) render themselves with their own gate.
+  const isChild = useRouterState({ select: (s) => s.location.pathname !== "/admin" });
+  if (isChild) return <Outlet />;
   if (!address || (!access.isPending && !access.isOwner))
     return (
       <div className="mx-auto max-w-md border-y border-border py-16 text-center">
