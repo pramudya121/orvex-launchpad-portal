@@ -1,5 +1,9 @@
 # ORVEX improvements
 
+- [x] Build zkLTC Faucet page (LitVMFaucet contract), X App User Connector quests with server-side verification, signature-gated Faucet Admin (funds, ownership, quest CRUD); verified both pages render.
+- [ ] Verify X connect popup and quest verification end-to-end — blocked by no real X account consent in the test browser.
+- [ ] Verify faucet claim/deposit/withdraw with the owner wallet — blocked by no connected funded signing wallet.
+
 - [ ] Enforce logo upload size at selection, server and storage.
 - [ ] Add incremental token and pool loading with bounded chain requests.
 - [ ] Implement DEX add/remove liquidity, confirmation and transaction status; show token-picker balances.
