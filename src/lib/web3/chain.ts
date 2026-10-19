@@ -22,6 +22,7 @@ export const CONTRACTS = {
   router: "0x03D2D542100fa926de135a08B609c8538E45F6ee",
   wzkltc: "0x3A153e8BcDe02F4Cf6C5eeECD9c83bC0296FFbD3",
   multicall: "0x25E7345084F79efC1b296d0c4a1B664191544bC4",
+  faucet: "0x883A2bEd62d383D1b070dD506D8feC45135a9313",
 } as const satisfies Record<string, Address>;
 
 const cmc = (id: number) => `https://s2.coinmarketcap.com/static/img/coins/64x64/${id}.png`;

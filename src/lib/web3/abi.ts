@@ -24,3 +24,28 @@ export const multicallAbi = [{"inputs": [{"components": [{"name": "target", "typ
 
 // Minimal UniswapV2 pair ABI (pool reserves for the DEX page).
 export const pairAbi = [{"type": "function", "name": "getReserves", "stateMutability": "view", "inputs": [], "outputs": [{"name": "reserve0", "type": "uint112"}, {"name": "reserve1", "type": "uint112"}, {"name": "blockTimestampLast", "type": "uint32"}]}, {"type": "function", "name": "token0", "stateMutability": "view", "inputs": [], "outputs": [{"name": "", "type": "address"}]}, {"type": "function", "name": "token1", "stateMutability": "view", "inputs": [], "outputs": [{"name": "", "type": "address"}]}] as const;
+
+/** LitVMFaucet — deployed zkLTC faucet (supplied by the project owner). */
+export const faucetAbi = [
+  { inputs: [], stateMutability: "nonpayable", type: "constructor" },
+  { inputs: [], name: "AlreadyClaimed", type: "error" },
+  { inputs: [], name: "InsufficientFaucetBalance", type: "error" },
+  { inputs: [], name: "NotOwner", type: "error" },
+  { inputs: [], name: "TransferFailed", type: "error" },
+  { inputs: [], name: "ZeroAddress", type: "error" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "Claimed", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "from", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "Deposited", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "previousOwner", type: "address" }, { indexed: true, internalType: "address", name: "newOwner", type: "address" }], name: "OwnershipTransferred", type: "event" },
+  { anonymous: false, inputs: [{ indexed: true, internalType: "address", name: "to", type: "address" }, { indexed: false, internalType: "uint256", name: "amount", type: "uint256" }], name: "Withdrawn", type: "event" },
+  { stateMutability: "payable", type: "receive" },
+  { inputs: [], name: "CLAIM_AMOUNT", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "account", type: "address" }], name: "checkHasClaimed", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "claim", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "deposit", outputs: [], stateMutability: "payable", type: "function" },
+  { inputs: [], name: "getFaucetBalance", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "", type: "address" }], name: "hasClaimed", outputs: [{ internalType: "bool", name: "", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "owner", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "address", name: "newOwner", type: "address" }], name: "transferOwnership", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [], name: "withdraw", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }], name: "withdrawAmount", outputs: [], stateMutability: "nonpayable", type: "function" },
+] as const;
