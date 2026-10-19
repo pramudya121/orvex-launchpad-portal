@@ -18,6 +18,7 @@ import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as TrendingRouteImport } from './routes/trending'
 import { Route as TokenSymbolRouteImport } from './routes/token.$symbol'
+import { Route as ApiOauthXReturnRouteImport } from './routes/api/oauth/x/return'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +65,11 @@ const TokenSymbolRoute = TokenSymbolRouteImport.update({
   path: '/token/$symbol',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOauthXReturnRoute = ApiOauthXReturnRouteImport.update({
+  id: '/api/oauth/x/return',
+  path: '/api/oauth/x/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
   '/token/$symbol': typeof TokenSymbolRoute
+  '/api/oauth/x/return': typeof ApiOauthXReturnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
   '/token/$symbol': typeof TokenSymbolRoute
+  '/api/oauth/x/return': typeof ApiOauthXReturnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/portfolio': typeof PortfolioRoute
   '/trending': typeof TrendingRoute
   '/token/$symbol': typeof TokenSymbolRoute
+  '/api/oauth/x/return': typeof ApiOauthXReturnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/portfolio'
     | '/trending'
     | '/token/$symbol'
+    | '/api/oauth/x/return'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/portfolio'
     | '/trending'
     | '/token/$symbol'
+    | '/api/oauth/x/return'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/portfolio'
     | '/trending'
     | '/token/$symbol'
+    | '/api/oauth/x/return'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   PortfolioRoute: typeof PortfolioRoute
   TrendingRoute: typeof TrendingRoute
   TokenSymbolRoute: typeof TokenSymbolRoute
+  ApiOauthXReturnRoute: typeof ApiOauthXReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TokenSymbolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/oauth/x/return': {
+      id: '/api/oauth/x/return'
+      path: '/api/oauth/x/return'
+      fullPath: '/api/oauth/x/return'
+      preLoaderRoute: typeof ApiOauthXReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +245,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortfolioRoute: PortfolioRoute,
   TrendingRoute: TrendingRoute,
   TokenSymbolRoute: TokenSymbolRoute,
+  ApiOauthXReturnRoute: ApiOauthXReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
